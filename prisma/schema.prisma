@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  CONSUMED
+  REMNANT
+}
+
+model InventoryItem {
+  id        String           @id @default(uuid())
+  name      String
+  width     Float
+  height    Float
+  thickness Float
+  price     Float
+  status    InventoryStatus @default(AVAILABLE)
+  parentId  String?
+  parent    InventoryItem?  @relation("InventoryItemRemnants", fields: [parentId], references: [id])
+  remnants  InventoryItem[] @relation("InventoryItemRemnants")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([parentId])
+  @@index([status])
+  @@index([createdAt])
+}

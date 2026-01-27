@@ -1,0 +1,5 @@
+{"location":"src/app/layout.tsx:4","message":"Import attempt: @/components/ui/toaster","data":{"importPath":"@/components/ui/toaster"},"timestamp":1769445036006,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"src/app/layout.tsx:6","message":"Import successful: Toaster component","data":{"toasterExists":true},"timestamp":1769445036008,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"src/app/page.tsx:2","message":"Import attempt: @/components/ui/button","data":{"importPath":"@/components/ui/button"},"timestamp":1769445036016,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"src/app/page.tsx:4","message":"Import successful: Button component","data":{"buttonExists":true},"timestamp":1769445036016,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"src/app/page.tsx:9","message":"Home component rendering","data":{},"timestamp":1769445036029,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}

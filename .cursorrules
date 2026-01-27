@@ -1,0 +1,22 @@
+# Project Rules for Bublinka ERP
+
+## 1. Directory Structure:
+- ALWAYS use the `src/` directory for all code.
+- Pages go in `src/app/`.
+- Components go in `src/components/`.
+- Lib/Utils go in `src/lib/`.
+- Never create files in the project root (except config files).
+
+## 2. Tech Stack:
+- Next.js 14 (App Router)
+- Tailwind CSS
+- shadcn/ui
+- Prisma + Supabase
+
+## 3. Language:
+- UI/Frontend text: **Czech** (Čeština).
+- Code/Comments/Commits: **English**.
+
+## 4. Documentation:
+- **ALWAYS read `docs/BUSINESS_LOGIC.md` when modifying inventory operations.**
+- Refer to `docs/TECH_CONTEXT.md` for technical architecture and current implementation status.
