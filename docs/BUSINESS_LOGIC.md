@@ -199,3 +199,174 @@ This feature is useful when:
 5. **Remnants link to parent** - full traceability
 6. **Consume Whole bypasses remnant logic** - efficiency for full consumption
 7. **Bulk add calculates unit price** - simplifies multi-item entry
+
+---
+
+# Products Module (Výrobky)
+
+## Product Concept
+
+Products represent **finished goods** that are manufactured from inventory items. Each product has:
+- Basic information (name, description, selling price)
+- Production steps (optional instructions)
+- A recipe/Bill of Materials (BOM) specifying which inventory items and quantities are needed
+- An optional product image
+
+## Recipe/BOM Logic (Bill of Materials)
+
+### Structure
+
+A **Product** consists of one or more **InventoryItems** with specific quantities:
+
+```
+Product = {
+  name: "Stůl",
+  ingredients: [
+    { inventoryItem: "Deska", quantity: 1 },
+    { inventoryItem: "Noha stolu", quantity: 4 },
+    { inventoryItem: "Šrouby", quantity: 16 }
+  ]
+}
+```
+
+### Key Rules
+
+1. **Minimum Ingredients**: A product must have at least one ingredient
+2. **Quantity Requirements**: Each ingredient must have a positive quantity (can be fractional, e.g., 0.5)
+3. **Unique Ingredients**: Each inventory item can only appear once per product (enforced by unique constraint)
+4. **Available Items Only**: Only inventory items with status `AVAILABLE` can be selected for recipes
+5. **Cascade Deletion**: When a product is deleted, all its ingredient relationships are automatically deleted
+
+### Data Model
+
+The relationship is implemented via the `ProductIngredient` join table:
+
+- **productId**: Links to the Product
+- **inventoryItemId**: Links to the InventoryItem
+- **quantity**: Stores how many units are needed (Float to support fractional quantities)
+
+**Example:**
+- Product: "Stůl" (Table)
+- Ingredient 1: 1x "Deska" (Board)
+- Ingredient 2: 4x "Noha stolu" (Table Leg)
+- Ingredient 3: 0.5x "Lepidlo" (Glue)
+
+### Use Cases
+
+- **Manufacturing**: Track which materials are needed to produce a finished product
+- **Cost Calculation**: Calculate production costs based on ingredient prices
+- **Inventory Planning**: Understand which inventory items are required for production
+- **Recipe Management**: Store and manage production recipes/BOMs
+
+## Image Security Logic
+
+### Private Storage
+
+Product images are stored in a **private Supabase Storage bucket** (`products`) to prevent:
+- Unauthorized access
+- Image scraping
+- Direct URL sharing without authentication
+
+### Signed URL Generation
+
+Instead of public URLs, the system uses **temporary signed URLs**:
+
+1. **Storage**: When an image is uploaded:
+   - File is stored in the private `products` bucket
+   - Only the **file path** (e.g., `1234567890-abc123.jpg`) is stored in the database `photoUrl` field
+   - No public URL is generated or stored
+
+2. **Retrieval**: When products are fetched:
+   - Server generates a **signed URL** for each product image
+   - Signed URLs are valid for **1 hour** (3600 seconds)
+   - The temporary URL is included in the API response
+   - Frontend receives a working URL that automatically expires
+
+3. **Security Benefits**:
+   - Images cannot be accessed without server-side authentication
+   - URLs expire after 1 hour, preventing long-term sharing
+   - Each request generates a new signed URL
+   - Prevents unauthorized scraping or direct access
+
+### Implementation Flow
+
+```
+Upload Flow:
+1. User selects image → File validation
+2. Upload to Supabase Storage (private bucket)
+3. Store file path in database (e.g., "1234567890-abc123.jpg")
+4. Create product with path
+
+Display Flow:
+1. Fetch products from database (includes file paths)
+2. For each product with photoUrl:
+   - Generate signed URL using supabase.storage.createSignedUrl(path, 3600)
+   - Replace path with temporary signed URL
+3. Return products to frontend with working URLs
+4. URLs expire after 1 hour
+```
+
+### Error Handling
+
+- If signed URL generation fails, the product is returned with `photoUrl: null`
+- Frontend displays a placeholder image when `photoUrl` is null
+- Errors are logged but don't prevent product data from being returned
+
+## Product Creation Flow
+
+1. **User Input:**
+   - Enters product name, description, selling price
+   - Optionally adds production steps
+   - Selects and uploads product image (optional)
+   - Adds ingredients via Recipe Editor:
+     - Selects inventory item from combobox
+     - Enters quantity needed
+     - Can add/remove multiple ingredients
+
+2. **Validation:**
+   - Product name is required
+   - Selling price must be positive
+   - At least one ingredient is required
+   - Each ingredient must have a valid inventory item and positive quantity
+   - Image file type and size validation (if provided)
+
+3. **Image Upload** (if provided):
+   - File is validated (type: JPG/PNG/WEBP/GIF, max 5MB)
+   - Uploaded to Supabase Storage
+   - File path is returned (not a URL)
+
+4. **Transaction:**
+   - Product record is created
+   - ProductIngredient records are created for each ingredient
+   - All operations in a single database transaction
+
+5. **Response:**
+   - Success message in Czech
+   - Product list refreshes
+   - Toast notification shown
+
+## Product Deletion Flow
+
+1. **User Action:**
+   - User clicks delete button on a product
+   - Confirmation dialog is shown
+
+2. **Deletion Process:**
+   - Product record is deleted
+   - All ProductIngredient records are deleted (cascade)
+   - Associated image is removed from Supabase Storage (if exists)
+   - All operations are atomic
+
+3. **Error Handling:**
+   - If storage deletion fails, it's logged but doesn't prevent product deletion
+   - User is notified of success or failure
+
+## Business Rules Summary - Products
+
+1. **Products require at least one ingredient** - cannot create empty recipes
+2. **Only AVAILABLE inventory items can be used** - prevents using consumed/remnant items
+3. **Quantities must be positive** - supports fractional quantities (e.g., 0.5)
+4. **Images are private by default** - stored in private bucket, accessed via signed URLs
+5. **Signed URLs expire after 1 hour** - security measure to prevent long-term sharing
+6. **Cascade deletion** - deleting a product removes all ingredient relationships
+7. **Transaction-based creation** - ensures data integrity when creating products with ingredients

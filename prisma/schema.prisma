@@ -29,10 +29,39 @@ model InventoryItem {
   parentId  String?
   parent    InventoryItem?  @relation("InventoryItemRemnants", fields: [parentId], references: [id])
   remnants  InventoryItem[] @relation("InventoryItemRemnants")
+  ingredients ProductIngredient[]
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   @@index([parentId])
   @@index([status])
   @@index([createdAt])
+}
+
+model Product {
+  id             String              @id @default(uuid())
+  name           String
+  description    String?
+  photoUrl       String?
+  sellingPrice   Float
+  productionSteps String?
+  ingredients    ProductIngredient[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([name])
+  @@index([createdAt])
+}
+
+model ProductIngredient {
+  id              String        @id @default(uuid())
+  productId       String
+  inventoryItemId String
+  quantity        Float
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, inventoryItemId])
+  @@index([productId])
+  @@index([inventoryItemId])
 }

@@ -29,9 +29,12 @@ All code is organized under the `src/` directory:
 src/
 ├── app/                    # Next.js App Router
 │   ├── actions/           # Server actions
-│   │   └── inventory.ts  # Inventory CRUD operations
+│   │   ├── inventory.ts  # Inventory CRUD operations
+│   │   └── products.ts    # Products CRUD operations
 │   ├── inventory/        # Inventory page route
 │   │   └── page.tsx      # Main inventory dashboard
+│   ├── products/         # Products page route
+│   │   └── page.tsx      # Products list page
 │   ├── layout.tsx        # Root layout with Toaster
 │   ├── page.tsx          # Homepage (Dashboard)
 │   └── globals.css       # Global styles
@@ -39,16 +42,24 @@ src/
 │   ├── inventory/        # Inventory-specific components
 │   │   ├── add-item-dialog.tsx
 │   │   └── cut-item-dialog.tsx
+│   ├── products/         # Products-specific components
+│   │   ├── create-product-dialog.tsx
+│   │   └── recipe-editor.tsx
 │   └── ui/               # shadcn/ui components
 │       ├── button.tsx
 │       ├── dialog.tsx
 │       ├── table.tsx
 │       ├── input.tsx
+│       ├── combobox.tsx
+│       ├── textarea.tsx
 │       └── ... (other UI components)
 ├── hooks/                # Custom React hooks
 │   └── use-toast.ts      # Toast notification hook
 └── lib/                  # Utilities and configurations
     ├── prisma.ts         # Prisma client singleton (with PG adapter)
+    ├── supabase.ts       # Supabase client for storage operations
+    ├── schemas/          # Zod validation schemas
+    │   └── products.ts   # Product validation schemas
     └── utils.ts          # Utility functions (cn helper)
 ```
 
@@ -90,6 +101,77 @@ model InventoryItem {
 
 **Purpose:**
 The InventoryItem model tracks material stock (e.g., wood panels, sheets) with dimensions and pricing. It supports a parent-child relationship to track remnants created from cutting operations.
+
+### Product Model
+
+```prisma
+model Product {
+  id             String              @id @default(uuid())
+  name           String
+  description    String?
+  photoUrl       String?             // File path in Supabase Storage (not a URL)
+  sellingPrice   Float
+  productionSteps String?
+  ingredients    ProductIngredient[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([name])
+  @@index([createdAt])
+}
+```
+
+**Purpose:**
+The Product model represents finished goods that are made from inventory items. Products have a selling price and can include production steps. The `photoUrl` field stores the file path (not a full URL) in Supabase Storage.
+
+### ProductIngredient Model (Join Table)
+
+```prisma
+model ProductIngredient {
+  id              String        @id @default(uuid())
+  productId       String
+  inventoryItemId String
+  quantity        Float         // Quantity needed (e.g., 4.0 for "4x Table Leg")
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, inventoryItemId])
+  @@index([productId])
+  @@index([inventoryItemId])
+}
+```
+
+**Purpose:**
+The ProductIngredient model creates a many-to-many relationship between Products and InventoryItems, representing the Bill of Materials (BOM) or recipe for each product. The `quantity` field stores how many units of each inventory item are needed to create the product.
+
+## Storage
+
+### Supabase Storage Configuration
+
+- **Bucket**: `products` (Private)
+- **Access**: Images are stored in a private bucket and served via **Signed URLs**
+- **Security**: Prevents unauthorized access and scraping of product images
+
+### Image Upload Flow
+
+1. **Upload**: When a product image is uploaded via `uploadProductImage()`:
+   - File is validated (type, size)
+   - Uploaded to Supabase Storage bucket `products`
+   - Only the **file path** (e.g., `1234567890-abc123.jpg`) is returned and stored in the database
+
+2. **Storage**: The `photoUrl` field in the Product model stores the file path, not a full URL
+
+3. **Retrieval**: When products are fetched via `getProducts()`:
+   - For each product with a `photoUrl` (path), a **Signed URL** is generated server-side
+   - Signed URLs are valid for **1 hour** (3600 seconds)
+   - The temporary signed URL replaces the path in the response
+   - Frontend receives a valid URL that expires after 1 hour
+
+### Supabase Client Configuration
+
+- **Location**: `src/lib/supabase.ts`
+- **Key**: Uses `SUPABASE_SERVICE_ROLE_KEY` (required for private bucket operations)
+- **Purpose**: Server-side client with permissions to generate signed URLs for private storage
 
 ## Current Status
 
@@ -133,10 +215,45 @@ The InventoryItem model tracks material stock (e.g., wood panels, sheets) with d
    - Toast notifications (Czech language)
    - Responsive table layout
 
+8. **Products Module** (`/products`)
+   - Product list page with grid view
+   - Create Product Dialog with form validation
+   - Recipe Editor (BOM) with dynamic ingredient list
+   - Image upload with preview
+   - Product deletion with cascade cleanup
+
+### Products Server Actions
+
+**Location**: `src/app/actions/products.ts`
+
+1. **`getProducts()`**
+   - Fetches all products with their ingredients
+   - Generates signed URLs for product images (valid for 1 hour)
+   - Returns products with temporary signed URLs for frontend display
+
+2. **`createProduct(data)`**
+   - Creates product with basic information
+   - Creates ProductIngredient records in a transaction
+   - Accepts file path (from upload) for `photoUrl`
+   - Returns created product with ingredients
+
+3. **`deleteProduct(id)`**
+   - Deletes product and all related ingredients (cascade)
+   - Removes associated image from Supabase Storage
+   - Transaction-based for data integrity
+
+4. **`uploadProductImage(formData)`**
+   - Validates file type and size (max 5MB)
+   - Uploads to Supabase Storage bucket `products`
+   - Returns file path (not a URL) for database storage
+   - Supported formats: JPG, PNG, WEBP, GIF
+
 ### 🔧 Technical Implementation Details
 
 - **Server Actions**: All database operations use Next.js server actions
-- **Transactions**: Bulk operations and cuts use Prisma transactions
-- **Validation**: Zod schemas for type-safe validation
+- **Transactions**: Bulk operations, cuts, and product creation use Prisma transactions
+- **Validation**: Zod schemas for type-safe validation (located in `src/lib/schemas/`)
 - **Error Handling**: Comprehensive error messages in Czech
 - **Type Safety**: Full TypeScript coverage with Prisma-generated types
+- **Storage Security**: Private bucket with signed URLs for image access
+- **Image Handling**: File paths stored in DB, signed URLs generated on-demand
