@@ -16,7 +16,7 @@
 ### Key Dependencies
 - `@prisma/adapter-pg` - PostgreSQL adapter for Prisma
 - `pg` - PostgreSQL client library
-- `@radix-ui/*` - UI primitives (Dialog, Toast, Checkbox, Radio, etc.)
+- `@radix-ui/*` - UI primitives (Dialog, Toast, Checkbox, Radio, Tooltip, etc.)
 - `lucide-react` - Icon library
 - `class-variance-authority` - Component variants
 - `tailwind-merge` - Tailwind class merging utility
@@ -39,6 +39,8 @@ src/
 │   ├── page.tsx          # Homepage (Dashboard)
 │   └── globals.css       # Global styles
 ├── components/            # React components
+│   ├── layout/           # Layout components
+│   │   └── Sidebar.tsx   # Collapsible sidebar navigation
 │   ├── inventory/        # Inventory-specific components
 │   │   ├── add-item-dialog.tsx
 │   │   └── cut-item-dialog.tsx
@@ -52,6 +54,7 @@ src/
 │       ├── input.tsx
 │       ├── combobox.tsx
 │       ├── textarea.tsx
+│       ├── tooltip.tsx
 │       └── ... (other UI components)
 ├── hooks/                # Custom React hooks
 │   └── use-toast.ts      # Toast notification hook
@@ -66,6 +69,37 @@ src/
 ### Path Aliases
 Configured in `tsconfig.json`:
 - `@/*` → `./src/*`
+
+## Navigation & Layout
+
+### Sidebar Navigation
+
+**Location**: `src/components/layout/Sidebar.tsx`
+
+The application features a permanent desktop sidebar navigation component with the following features:
+
+**Features:**
+- **Collapsible Design**: Sidebar can be toggled between expanded (`w-64`) and collapsed (`w-[70px]`) states
+- **Smooth Transitions**: All state changes use `transition-all duration-300` for smooth animations
+- **Active Route Detection**: Uses `usePathname()` from Next.js to highlight the current page
+- **Icon-Only Mode**: When collapsed, navigation items show only icons with tooltips on hover
+- **Branding Header**: "Bublinka ERP" header with link to homepage, icon remains visible when collapsed
+- **Toggle Button**: Circular floating button positioned on the right border edge, vertically centered
+
+**Navigation Items:**
+- "Sklad" (Inventory) → `/inventory` (Package icon)
+- "Produkty" (Products) → `/products` (Layers icon)
+
+**Layout Structure:**
+- Root layout (`src/app/layout.tsx`) uses flexbox: `flex h-screen overflow-hidden`
+- Sidebar is fixed-width on the left
+- Main content area uses `flex-1 overflow-y-auto` for scrollable content
+- Only the main content scrolls; sidebar remains fixed
+
+**UI Components Used:**
+- shadcn/ui Button component with `variant="ghost"`
+- shadcn/ui Tooltip component (from `@radix-ui/react-tooltip`) for collapsed state labels
+- Lucide React icons (Package, Layers, ChevronLeft, ChevronRight)
 
 ## Database
 
@@ -221,6 +255,13 @@ The ProductIngredient model creates a many-to-many relationship between Products
    - Recipe Editor (BOM) with dynamic ingredient list
    - Image upload with preview
    - Product deletion with cascade cleanup
+
+9. **Sidebar Navigation** (`/components/layout/Sidebar.tsx`)
+   - Permanent desktop sidebar with collapsible functionality
+   - Active route highlighting using `usePathname()`
+   - Icon-only mode with tooltips when collapsed
+   - Smooth transitions and animations
+   - Circular toggle button on right border edge
 
 ### Products Server Actions
 
