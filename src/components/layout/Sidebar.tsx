@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Layers, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -27,6 +27,11 @@ export function Sidebar() {
       label: 'Produkty',
       href: '/products',
       icon: Layers,
+    },
+    {
+      label: 'Objednávky',
+      href: '/orders',
+      icon: FileText,
     },
   ];
 
@@ -57,7 +62,7 @@ export function Sidebar() {
         <nav className="p-4 space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
             const buttonContent = (
               <Button

@@ -18,20 +18,28 @@ enum InventoryStatus {
   REMNANT
 }
 
+enum OrderStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model InventoryItem {
-  id        String           @id @default(uuid())
-  name      String
-  width     Float
-  height    Float
-  thickness Float
-  price     Float
-  status    InventoryStatus @default(AVAILABLE)
-  parentId  String?
-  parent    InventoryItem?  @relation("InventoryItemRemnants", fields: [parentId], references: [id])
-  remnants  InventoryItem[] @relation("InventoryItemRemnants")
-  ingredients ProductIngredient[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id              String           @id @default(uuid())
+  name            String
+  width           Float
+  height          Float
+  thickness       Float
+  price           Float
+  status          InventoryStatus @default(AVAILABLE)
+  reservedQuantity Float           @default(0)
+  parentId        String?
+  parent          InventoryItem?  @relation("InventoryItemRemnants", fields: [parentId], references: [id])
+  remnants        InventoryItem[] @relation("InventoryItemRemnants")
+  ingredients     ProductIngredient[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([parentId])
   @@index([status])
@@ -46,6 +54,7 @@ model Product {
   sellingPrice   Float
   productionSteps String?
   ingredients    ProductIngredient[]
+  orderItems     OrderItem[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -64,4 +73,30 @@ model ProductIngredient {
   @@unique([productId, inventoryItemId])
   @@index([productId])
   @@index([inventoryItemId])
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  name      String
+  status    OrderStatus @default(DRAFT)
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId String
+  quantity  Int
+  unitPrice Float
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@index([orderId])
+  @@index([productId])
 }
