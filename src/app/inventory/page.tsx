@@ -17,19 +17,39 @@ import { CutItemDialog } from '@/components/inventory/cut-item-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { InventoryItem } from '@prisma/client';
 
-const statusLabels: Record<string, string> = {
-  AVAILABLE: 'Dostupné',
-  CONSUMED: 'Spotřebováno',
-  REMNANT: 'Zbytek',
-};
+/** Status badge label and style from group totals (not just DB status) */
+function getInventoryStatusDisplay(group: InventoryGroup): { label: string; className: string } {
+  const { total: quantity, reserved: reservedQuantity, available: availableCount, sampleItem } = group;
+  if (sampleItem.status === 'CONSUMED') {
+    return { label: 'Spotřebováno', className: 'bg-gray-100 text-gray-800' };
+  }
+  // AVAILABLE (and REMNANT): derive label from quantity vs reserved
+  if (availableCount <= 0 && quantity > 0) {
+    return { label: 'Rezervováno', className: 'bg-amber-100 text-amber-800' };
+  }
+  if (availableCount > 0 && reservedQuantity > 0) {
+    return { label: 'Částečně rezervováno', className: 'bg-blue-100 text-blue-800' };
+  }
+  if (reservedQuantity === 0) {
+    return { label: 'Dostupné', className: 'bg-green-100 text-green-800' };
+  }
+  return { label: 'Zbytek', className: 'bg-yellow-100 text-yellow-800' };
+}
 
 type InventoryGroup = {
+  groupKey: string;
   name: string;
   total: number;
   reserved: number;
   available: number;
   sampleItem: InventoryItem; // For dimensions, price, status display
 };
+
+/** Unique key for grouping: same definition + dimensions = same row */
+function getGroupKey(item: InventoryItem): string {
+  const def = item.itemDefinitionId ?? item.name;
+  return `${def}-${item.width}-${item.height}-${item.thickness}`;
+}
 
 export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -46,18 +66,19 @@ export default function InventoryPage() {
     if (result.success && result.data) {
       setItems(result.data);
       
-      // Group items by name and calculate totals
+      // Group items by itemDefinitionId + width + height + thickness (strict dimension separation)
       const grouped = new Map<string, InventoryGroup>();
-      
+
       for (const item of result.data) {
-        // Only count AVAILABLE items for totals
+        const key = getGroupKey(item);
         if (item.status === 'AVAILABLE') {
-          const existing = grouped.get(item.name);
+          const existing = grouped.get(key);
           if (existing) {
             existing.total += 1;
             existing.reserved += item.reservedQuantity;
           } else {
-            grouped.set(item.name, {
+            grouped.set(key, {
+              groupKey: key,
               name: item.name,
               total: 1,
               reserved: item.reservedQuantity,
@@ -65,9 +86,9 @@ export default function InventoryPage() {
               sampleItem: item,
             });
           }
-        } else if (!grouped.has(item.name)) {
-          // Include sample item even if not available (for dimensions/price display)
-          grouped.set(item.name, {
+        } else if (!grouped.has(key)) {
+          grouped.set(key, {
+            groupKey: key,
             name: item.name,
             total: 0,
             reserved: 0,
@@ -168,13 +189,13 @@ export default function InventoryPage() {
                 </TableRow>
               ) : (
                 groups.map((group) => (
-                  <TableRow key={group.name}>
+                  <TableRow key={group.groupKey}>
                     <TableCell className='font-medium'>{group.name}</TableCell>
                     <TableCell>
                       {group.sampleItem.width} × {group.sampleItem.height} × {group.sampleItem.thickness}
                     </TableCell>
                     <TableCell>{group.sampleItem.price.toFixed(2)}</TableCell>
-                    <TableCell className='font-medium'>{group.total}</TableCell>
+                    <TableCell className='font-medium'>{group.total} ks</TableCell>
                     <TableCell>
                       <span
                         className={`font-medium ${
@@ -188,26 +209,23 @@ export default function InventoryPage() {
                     </TableCell>
                     <TableCell className='font-medium'>{group.available.toFixed(1)}</TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          group.sampleItem.status === 'AVAILABLE'
-                            ? 'bg-green-100 text-green-800'
-                            : group.sampleItem.status === 'CONSUMED'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {statusLabels[group.sampleItem.status] || group.sampleItem.status}
-                      </span>
+                      {(() => {
+                        const { label, className } = getInventoryStatusDisplay(group);
+                        return (
+                          <span className={`px-2 py-1 rounded text-xs ${className}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => {
-                          // Find first available item for cutting
+                          // Find first available item in this dimension group
                           const availableItem = items.find(
-                            (i) => i.name === group.name && i.status === 'AVAILABLE'
+                            (i) => getGroupKey(i) === group.groupKey && i.status === 'AVAILABLE'
                           );
                           if (availableItem) {
                             handleCutClick(availableItem);

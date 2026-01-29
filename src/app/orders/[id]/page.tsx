@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
+import { MaterialCheck } from '@/components/orders/material-check';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Trash2, Plus, X, Play, Check, RotateCcw, Ban, AlertCircle } from 'lucide-react';
 import type { Order, OrderItem, Product, OrderStatus } from '@prisma/client';
@@ -587,6 +589,16 @@ export default function OrderDetailPage() {
           </Table>
         )}
       </div>
+
+      {/* Spacing + separator before Material Check */}
+      {(order.status === 'DRAFT' || order.status === 'IN_PROGRESS') && (
+        <>
+          <Separator className="my-8" />
+          <div className="mt-8">
+            <MaterialCheck orderId={orderId} onResolved={loadOrder} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

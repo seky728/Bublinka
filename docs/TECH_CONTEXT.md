@@ -29,41 +29,62 @@ All code is organized under the `src/` directory:
 src/
 ├── app/                    # Next.js App Router
 │   ├── actions/           # Server actions
-│   │   ├── inventory.ts  # Inventory CRUD operations
+│   │   ├── inventory.ts   # Inventory CRUD and cut operations
+│   │   ├── item-definitions.ts  # Catalog (ItemDefinition) CRUD
+│   │   ├── orders.ts      # Orders CRUD and status/reservation logic
 │   │   └── products.ts    # Products CRUD operations
-│   ├── inventory/        # Inventory page route
-│   │   └── page.tsx      # Main inventory dashboard
-│   ├── products/         # Products page route
-│   │   └── page.tsx      # Products list page
-│   ├── layout.tsx        # Root layout with Toaster
-│   ├── page.tsx          # Homepage (Dashboard)
-│   └── globals.css       # Global styles
+│   ├── catalog/           # Catalog module (item definitions)
+│   │   └── page.tsx       # Katalog položek – list and manage ItemDefinitions
+│   ├── inventory/         # Inventory page route
+│   │   └── page.tsx       # Main inventory dashboard (grouped by definition + dimensions)
+│   ├── orders/            # Orders module
+│   │   ├── page.tsx       # Orders list
+│   │   └── [id]/
+│   │       └── page.tsx   # Order detail/edit with status workflow
+│   ├── products/          # Products page route
+│   │   └── page.tsx       # Products list page
+│   ├── layout.tsx         # Root layout with Toaster
+│   ├── page.tsx           # Homepage (Dashboard)
+│   └── globals.css        # Global styles
 ├── components/            # React components
-│   ├── layout/           # Layout components
-│   │   └── Sidebar.tsx   # Collapsible sidebar navigation
-│   ├── inventory/        # Inventory-specific components
-│   │   ├── add-item-dialog.tsx
+│   ├── layout/            # Layout components
+│   │   └── Sidebar.tsx    # Collapsible sidebar navigation
+│   ├── inventory/         # Inventory-specific components
+│   │   ├── add-item-dialog.tsx   # Add item with ItemDefinition combobox + note
 │   │   └── cut-item-dialog.tsx
-│   ├── products/         # Products-specific components
+│   ├── orders/            # Orders-specific components
+│   │   ├── create-order-dialog.tsx
+│   │   ├── order-status-badge.tsx
+│   │   ├── material-check.tsx    # Material availability (ready/cut needed/missing) + Vyřešit → CutAllocationDialog
+│   │   └── cut-allocation-dialog.tsx  # Select source board, Nařezat → performOrderCut
+│   ├── products/          # Products-specific components
 │   │   ├── create-product-dialog.tsx
-│   │   └── recipe-editor.tsx
-│   └── ui/               # shadcn/ui components
+│   │   ├── edit-product-dialog.tsx
+│   │   └── recipe-editor.tsx    # Ingredients: ItemDefinition + quantity + width/height (sheet)
+│   ├── settings/          # Settings/catalog shared UI
+│   │   └── definition-dialog.tsx  # Create/edit ItemDefinition (used by catalog page)
+│   └── ui/                # shadcn/ui components
 │       ├── button.tsx
 │       ├── dialog.tsx
+│       ├── separator.tsx
 │       ├── table.tsx
 │       ├── input.tsx
 │       ├── combobox.tsx
 │       ├── textarea.tsx
 │       ├── tooltip.tsx
 │       └── ... (other UI components)
-├── hooks/                # Custom React hooks
-│   └── use-toast.ts      # Toast notification hook
-└── lib/                  # Utilities and configurations
-    ├── prisma.ts         # Prisma client singleton (with PG adapter)
-    ├── supabase.ts       # Supabase client for storage operations
-    ├── schemas/          # Zod validation schemas
-    │   └── products.ts   # Product validation schemas
-    └── utils.ts          # Utility functions (cn helper)
+├── hooks/                 # Custom React hooks
+│   └── use-toast.ts       # Toast notification hook
+└── lib/                   # Utilities and configurations
+    ├── prisma.ts          # Prisma client singleton (with PG adapter)
+    ├── supabase.ts        # Supabase client for storage operations
+    ├── schemas/           # Zod validation schemas
+    │   ├── item-definitions.ts  # ItemDefinition CRUD validation
+    │   ├── orders.ts      # Order validation schemas
+    │   └── products.ts    # Product validation schemas
+    ├── types/             # Shared TypeScript types
+    │   └── order-material.ts  # MaterialRequirement, MaterialAvailabilityStatus (for material check)
+    └── utils.ts           # Utility functions (cn helper)
 ```
 
 ### Path Aliases
@@ -89,6 +110,8 @@ The application features a permanent desktop sidebar navigation component with t
 **Navigation Items:**
 - "Sklad" (Inventory) → `/inventory` (Package icon)
 - "Produkty" (Products) → `/products` (Layers icon)
+- "Objednávky" (Orders) → `/orders` (FileText icon)
+- "Katalog" (Catalog) → `/catalog` (BookOpen icon)
 
 **Layout Structure:**
 - Root layout (`src/app/layout.tsx`) uses flexbox: `flex h-screen overflow-hidden`
@@ -99,7 +122,7 @@ The application features a permanent desktop sidebar navigation component with t
 **UI Components Used:**
 - shadcn/ui Button component with `variant="ghost"`
 - shadcn/ui Tooltip component (from `@radix-ui/react-tooltip`) for collapsed state labels
-- Lucide React icons (Package, Layers, ChevronLeft, ChevronRight)
+- Lucide React icons (Package, Layers, FileText, BookOpen, ChevronLeft, ChevronRight)
 
 ## Database
 
@@ -109,22 +132,51 @@ The application features a permanent desktop sidebar navigation component with t
 - **Connection**: Via `DATABASE_URL` environment variable (Supabase)
 - **Client Location**: `node_modules/@prisma/client`
 
+### ItemDefinition and Catalog
+
+```prisma
+enum ItemDefinitionCategory {
+  SHEET_MATERIAL
+  COMPONENT
+  OTHER
+}
+
+model ItemDefinition {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  category           ItemDefinitionCategory
+  properties         Json?
+  description        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  inventoryItems     InventoryItem[]
+  productIngredients ProductIngredient[]
+}
+```
+
+**Purpose:**
+ItemDefinition is the central catalog of material types (e.g. "Bříza 18mm", "Stainless Steel Flask"). Inventory items and product recipes reference definitions instead of free text or specific physical items. Categories: SHEET_MATERIAL (Deskový materiál), COMPONENT (Komponent), OTHER (Ostatní). The Catalog module (`/catalog`) provides CRUD for definitions; `getAllItemDefinitions()` is used by Add Item Dialog and Recipe Editor.
+
 ### InventoryItem Model
 
 ```prisma
 model InventoryItem {
-  id        String           @id @default(uuid())
-  name      String
-  width     Float            // mm
-  height    Float            // mm
-  thickness Float            // mm
-  price     Float            // unit price in CZK
-  status    InventoryStatus  @default(AVAILABLE)
-  parentId  String?
-  parent    InventoryItem?   @relation("InventoryItemRemnants")
-  remnants  InventoryItem[]  @relation("InventoryItemRemnants")
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id               String           @id @default(uuid())
+  name             String           // Display name (from definition + note or legacy free text)
+  width            Float            // mm
+  height           Float            // mm
+  thickness        Float            // mm
+  price            Float            // unit price in CZK
+  status           InventoryStatus  @default(AVAILABLE)
+  reservedQuantity Float            @default(0)  // Reserved for orders (0 or 1 per item)
+  itemDefinitionId Int?
+  itemDefinition   ItemDefinition?  @relation(...)
+  parentId         String?
+  parent           InventoryItem?   @relation("InventoryItemRemnants")
+  remnants         InventoryItem[]  @relation("InventoryItemRemnants")
+  ingredients      ProductIngredient[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 }
 ```
 
@@ -134,7 +186,47 @@ model InventoryItem {
 - `REMNANT` - Item is a leftover piece from cutting
 
 **Purpose:**
-The InventoryItem model tracks material stock (e.g., wood panels, sheets) with dimensions and pricing. It supports a parent-child relationship to track remnants created from cutting operations.
+InventoryItem represents physical stock with dimensions and pricing. When created via Add Item Dialog, the user selects an ItemDefinition and optional note; `name` is derived (e.g. definition name + " – " + note). Optional `itemDefinitionId` links the item to the catalog; remnants inherit `itemDefinitionId` from the original. Order reservation matches by `itemDefinitionId` (or by name for legacy items).
+
+### Order and OrderItem Models
+
+```prisma
+enum OrderStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  name      String
+  status    OrderStatus @default(DRAFT)
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId String
+  quantity  Int
+  unitPrice Float   // Snapshot of product price at order creation
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@index([orderId])
+  @@index([productId])
+}
+```
+
+**Purpose:**
+Orders group Products into jobs. Order ID is displayed as short ID (e.g. #0001). OrderItem links Order to Product with quantity and a price snapshot. Status workflow (DRAFT → IN_PROGRESS → COMPLETED, with revert/cancel options) controls editing lock and inventory reservations.
 
 ### Product Model
 
@@ -147,6 +239,7 @@ model Product {
   sellingPrice   Float
   productionSteps String?
   ingredients    ProductIngredient[]
+  orderItems     OrderItem[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -156,27 +249,33 @@ model Product {
 ```
 
 **Purpose:**
-The Product model represents finished goods that are made from inventory items. Products have a selling price and can include production steps. The `photoUrl` field stores the file path (not a full URL) in Supabase Storage.
+The Product model represents finished goods. Recipes reference **ItemDefinitions** (catalog) rather than specific inventory items. The `photoUrl` field stores the file path (not a full URL) in Supabase Storage.
 
-### ProductIngredient Model (Join Table)
+### ProductIngredient Model (Recipe / BOM)
 
 ```prisma
 model ProductIngredient {
-  id              String        @id @default(uuid())
-  productId       String
-  inventoryItemId String
-  quantity        Float         // Quantity needed (e.g., 4.0 for "4x Table Leg")
-  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  productId        String
+  inventoryItemId  String?        // Legacy; new recipes use itemDefinitionId
+  itemDefinitionId Int?
+  quantity         Float          // Quantity needed (e.g. 4.0 for "4× Table Leg")
+  width            Float?         // mm – used for sheet materials (required when category SHEET_MATERIAL)
+  height           Float?         // mm – used for sheet materials
+  product         Product        @relation(...)
+  inventoryItem   InventoryItem? @relation(...)
+  itemDefinition  ItemDefinition? @relation(...)
 
   @@unique([productId, inventoryItemId])
+  @@unique([productId, itemDefinitionId])
   @@index([productId])
   @@index([inventoryItemId])
+  @@index([itemDefinitionId])
 }
 ```
 
 **Purpose:**
-The ProductIngredient model creates a many-to-many relationship between Products and InventoryItems, representing the Bill of Materials (BOM) or recipe for each product. The `quantity` field stores how many units of each inventory item are needed to create the product.
+ProductIngredient is the Bill of Materials (BOM) for a product. New recipes use `itemDefinitionId` (catalog); `inventoryItemId` is optional for legacy data. `quantity` is always required. For sheet materials (definition category SHEET_MATERIAL), `width` and `height` (mm) are stored so the recipe specifies e.g. "500×500 mm – 1 ks". Order reservation uses `itemDefinitionId` and quantity to match and reserve inventory.
 
 ## Storage
 
@@ -212,7 +311,8 @@ The ProductIngredient model creates a many-to-many relationship between Products
 ### ✅ Fully Implemented Features
 
 1. **Add Material** (`addInventoryItem`)
-   - Single item creation with name, dimensions, and price
+   - Single item creation: select **ItemDefinition** (catalog) via combobox, optional note; name derived from definition + note
+   - Dimensions (width, height, thickness), price, and optional bulk quantity
    - Form validation using Zod
    - Server action with error handling
 
@@ -227,6 +327,10 @@ The ProductIngredient model creates a many-to-many relationship between Products
    - Real-time dimension and price preview in UI
    - Direction selection (horizontal/vertical)
 
+3b. **Order Cut / Allocation** (`performOrderCut`, `getAvailableSourceBoards`) — **Location**: `src/app/actions/inventory.ts`
+   - **getAvailableSourceBoards(itemDefinitionId, minWidth, minHeight)**: Returns AVAILABLE inventory items matching definition with dimensions ≥ required. Used by CutAllocationDialog to list source boards.
+   - **performOrderCut(sourceItemId, targetWidth, targetHeight, quantity, orderId)**: Guillotine L-shape split in a single transaction: (1) mark source CONSUMED; (2) create **target** item (exact required dimensions, **reservedQuantity: 1**, status AVAILABLE, parentId, itemDefinitionId, name `"[Name] (Cut)"`); (3) create 1 or 2 **offcuts** (Right: `(w_source − w_req) × h_source`, Top: `w_req × (h_source − h_req)`; only if both dimensions > 10 mm). Offcuts have **reservedQuantity: 0** and status AVAILABLE (released to inventory). All new items inherit **itemDefinitionId**, **thickness**, **parentId** from source. After success, **revalidatePath** `/orders/[id]` and `/inventory`. Used from Order Detail when user resolves "Potřeba řez" via Vyřešit → select board → Nařezat.
+
 4. **Consume Whole** (special cut case)
    - Quick action to consume entire item
    - Detects when cut dimensions match original
@@ -237,11 +341,11 @@ The ProductIngredient model creates a many-to-many relationship between Products
    - Prevents recursive naming (Zbytek z Zbytek z...)
    - Maintains traceability to parent item
 
-6. **Inventory Dashboard**
-   - Table view with all items
-   - Status badges (color-coded)
-   - Filter by status (implicit via UI)
-   - Action buttons per item
+6. **Inventory Dashboard** (`/inventory`)
+   - Table view grouped by **itemDefinitionId + width + height + thickness** (strict dimension separation; different dimensions = separate rows)
+   - Columns: Název, Rozměry, Cena, **Celkem** (total physical quantity, "X ks"), **Rezervováno**, **Dostupné** (total − reserved)
+   - **Status badge** derived from group totals (not only DB status): CONSUMED → "Spotřebováno" (gray); if AVAILABLE: available ≤ 0 and quantity > 0 → "Rezervováno" (amber); available > 0 and reserved > 0 → "Částečně rezervováno" (blue); reserved === 0 → "Dostupné" (green)
+   - Action buttons per row (Řezat uses first available item in that dimension group)
 
 7. **UI Components**
    - Add Item Dialog with bulk support
@@ -249,19 +353,40 @@ The ProductIngredient model creates a many-to-many relationship between Products
    - Toast notifications (Czech language)
    - Responsive table layout
 
-8. **Products Module** (`/products`)
-   - Product list page with grid view
-   - Create Product Dialog with form validation
-   - Recipe Editor (BOM) with dynamic ingredient list
-   - Image upload with preview
-   - Product deletion with cascade cleanup
+8. **Catalog Module** (`/catalog`)
+   - "Katalog položek" page: list and manage **ItemDefinition** records (data table, add/edit/delete)
+   - Definition dialog: name, category (SHEET_MATERIAL / COMPONENT / OTHER), description, properties (JSON)
+   - Used by Inventory (Add Item combobox) and Products (Recipe Editor ingredient selection)
 
-9. **Sidebar Navigation** (`/components/layout/Sidebar.tsx`)
+9. **Products Module** (`/products`)
+   - Product list page with grid view; **Edit** and Delete per product
+   - Create Product Dialog and **Edit Product Dialog** with form validation; Recipe Editor uses **ItemDefinition** for ingredients (quantity; width/height required for SHEET_MATERIAL), table layout for ingredient list
+   - Image upload with preview; getProduct returns imageUrl (signed) for edit preview, photoUrl (path) for save
+   - Product creation, update (**updateProduct**), and deletion with cascade cleanup
+
+10. **Orders Module** (`/orders`)
+   - Orders list: table with ID (#0000), Name, Status, Date, Total Items; create order; row click → detail
+   - Order detail (`/orders/[id]`): editable name (when DRAFT), status badge, items table, add product (Combobox + quantity), remove item
+   - **Order Status Workflow**: DRAFT ↔ IN_PROGRESS ↔ COMPLETED, any → CANCELLED; CANCELLED → DRAFT ("Obnovit zakázku"); COMPLETED → IN_PROGRESS ("Vrátit do výroby")
+   - **Soft lock**: When status is not DRAFT, add product form and item delete are hidden, name editing disabled; banner explains revert to edit
+   - Status-specific banners: CANCELLED ("Zakázka je zrušena" + Obnovit), COMPLETED ("Zakázka je hotová" + Vrátit do výroby), IN_PROGRESS (info banner)
+   - Create order redirects to new order detail page after success
+   - **Material Availability Check** (when status DRAFT or IN_PROGRESS): **MaterialCheck** component below Order Items table (with Separator and spacing). Shows required materials with status badges: 🟢 Připraveno (exact or enough stock), 🟠 Potřeba řez (only larger boards available), 🔴 Chybí. For "Potřeba řez" a **Vyřešit** button opens **CutAllocationDialog**: user selects a source board from available inventory (matching definition, dimensions ≥ required), clicks **Nařezat**; **performOrderCut** consumes source, creates target piece (exact dimensions, reservedQuantity 1), creates remnants; MaterialCheck refetches and row can turn green (Připraveno).
+
+11. **Inventory Reservations**
+   - On order DRAFT → IN_PROGRESS: total required ingredients (from product BOM × order item quantity) are computed; matching AVAILABLE items by **itemDefinitionId** (or by name for legacy) get `reservedQuantity` set (reservation)
+   - On IN_PROGRESS → COMPLETED: reserved items are released and marked CONSUMED
+   - On IN_PROGRESS → DRAFT or CANCELLED: reservedQuantity is released (no consumption)
+   - On COMPLETED → IN_PROGRESS (reopen): inventory is reserved again
+   - CANCELLED → DRAFT: no inventory change (already released)
+
+12. **Sidebar Navigation** (`/components/layout/Sidebar.tsx`)
    - Permanent desktop sidebar with collapsible functionality
-   - Active route highlighting using `usePathname()`
+   - Active route highlighting using `usePathname()` (including `/orders/[id]`)
    - Icon-only mode with tooltips when collapsed
    - Smooth transitions and animations
    - Circular toggle button on right border edge
+   - Nav items: Sklad, Produkty, Objednávky, Katalog
 
 ### Products Server Actions
 
@@ -274,7 +399,7 @@ The ProductIngredient model creates a many-to-many relationship between Products
 
 2. **`createProduct(data)`**
    - Creates product with basic information
-   - Creates ProductIngredient records in a transaction
+   - Creates ProductIngredient records in a transaction (itemDefinitionId, quantity, optional width/height for sheet materials)
    - Accepts file path (from upload) for `photoUrl`
    - Returns created product with ingredients
 
@@ -289,6 +414,46 @@ The ProductIngredient model creates a many-to-many relationship between Products
    - Returns file path (not a URL) for database storage
    - Supported formats: JPG, PNG, WEBP, GIF
 
+5. **`getProduct(id)`**
+   - Returns single product with ingredients and itemDefinition; adds **imageUrl** (signed URL) for display, keeps **photoUrl** (path) for form submit. Used by Edit Product Dialog.
+
+6. **`updateProduct(data)`**
+   - Updates product fields and replaces ingredients (delete existing, create from payload). Same ingredient shape as create (itemDefinitionId, quantity, width, height).
+
+### Orders Server Actions
+
+**Location**: `src/app/actions/orders.ts`
+
+1. **`getOrders()`**
+   - Returns all orders with item counts and formatted ID (#0000)
+
+2. **`getOrder(id)`**
+   - Returns single order with items and product details (id, name, sellingPrice, photoUrl)
+
+3. **`getOrderMaterialAvailability(orderId)`**
+   - Loads order with items and product ingredients (itemDefinition, width, height). Aggregates requirements by (itemDefinitionId, width?, height?), sums quantity per group. For each requirement, queries AVAILABLE inventory: for SHEET_MATERIAL (with dimensions) counts exact-match and larger items, sets status **ready** / **cut_needed** / **missing**; for COMPONENT/OTHER counts items and sets ready or missing. Returns `MaterialRequirement[]` (definitionName, quantityRequired, width?, height?, status). Used by **MaterialCheck** on Order Detail.
+
+4. **`createOrder(data)`**
+   - Creates order (name, status default DRAFT); returns created order and **orderId** for redirect to `/orders/[id]`
+
+5. **`updateOrder(data)`**
+   - Updates order name and/or status (partial updates supported)
+
+6. **`updateOrderStatus(id, newStatus)`**
+   - Validates status transitions (DRAFT→IN_PROGRESS, IN_PROGRESS→COMPLETED/DRAFT/CANCELLED, COMPLETED→CANCELLED/IN_PROGRESS, CANCELLED→DRAFT)
+   - **Inventory reservation logic**: On DRAFT→IN_PROGRESS reserves inventory by **itemDefinitionId** (from BOM × order item qty; fallback to name for legacy); on IN_PROGRESS→COMPLETED consumes reserved items; on revert/cancel releases reservations; on COMPLETED→IN_PROGRESS re-reserves
+
+7. **`deleteOrder(id)`**
+   - Deletes order (cascade deletes OrderItems)
+
+8. **`addOrderItem(orderId, productId, quantity)`**
+   - Adds product to order with current sellingPrice snapshot; prevents duplicate product per order
+
+9. **`removeOrderItem(itemId)`**
+   - Removes one order item by id
+
+**Validation**: `src/lib/schemas/orders.ts` (createOrder, updateOrder, deleteOrder, addOrderItem, removeOrderItem, getOrder, updateOrderStatus)
+
 ### 🔧 Technical Implementation Details
 
 - **Server Actions**: All database operations use Next.js server actions
@@ -298,3 +463,7 @@ The ProductIngredient model creates a many-to-many relationship between Products
 - **Type Safety**: Full TypeScript coverage with Prisma-generated types
 - **Storage Security**: Private bucket with signed URLs for image access
 - **Image Handling**: File paths stored in DB, signed URLs generated on-demand
+- **Orders**: Status-driven UI lock and inventory reservations in a single transaction in `updateOrderStatus`
+- **Inventory display**: Items grouped by **itemDefinitionId + width + height + thickness** (one row per dimension combo); Celkem / Rezervováno / Dostupné computed per group; status badge reflects group totals (Rezervováno / Částečně rezervováno / Dostupné / Spotřebováno)
+- **Order Detail layout**: Separator component and `mt-8` spacing between Order Items table and Material Availability Check section
+- **Material check types**: `src/lib/types/order-material.ts` defines `MaterialRequirement` and `MaterialAvailabilityStatus` ('ready' | 'cut_needed' | 'missing') for the order material availability and cut-allocation flow

@@ -25,25 +25,49 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum ItemDefinitionCategory {
+  SHEET_MATERIAL
+  COMPONENT
+  OTHER
+}
+
+model ItemDefinition {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  category           ItemDefinitionCategory
+  properties         Json?
+  description        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  inventoryItems     InventoryItem[]
+  productIngredients ProductIngredient[]
+
+  @@index([category])
+  @@index([createdAt])
+}
+
 model InventoryItem {
-  id              String           @id @default(uuid())
-  name            String
-  width           Float
-  height          Float
-  thickness       Float
-  price           Float
-  status          InventoryStatus @default(AVAILABLE)
-  reservedQuantity Float           @default(0)
-  parentId        String?
-  parent          InventoryItem?  @relation("InventoryItemRemnants", fields: [parentId], references: [id])
-  remnants        InventoryItem[] @relation("InventoryItemRemnants")
-  ingredients     ProductIngredient[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String           @id @default(uuid())
+  name             String
+  width            Float
+  height           Float
+  thickness        Float
+  price            Float
+  status           InventoryStatus  @default(AVAILABLE)
+  reservedQuantity Float            @default(0)
+  itemDefinitionId Int?
+  itemDefinition   ItemDefinition?  @relation(fields: [itemDefinitionId], references: [id])
+  parentId         String?
+  parent           InventoryItem?   @relation("InventoryItemRemnants", fields: [parentId], references: [id])
+  remnants         InventoryItem[]  @relation("InventoryItemRemnants")
+  ingredients      ProductIngredient[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([parentId])
   @@index([status])
   @@index([createdAt])
+  @@index([itemDefinitionId])
 }
 
 model Product {
@@ -63,16 +87,22 @@ model Product {
 }
 
 model ProductIngredient {
-  id              String        @id @default(uuid())
-  productId       String
-  inventoryItemId String
-  quantity        Float
-  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  productId        String
+  inventoryItemId  String?
+  itemDefinitionId Int?
+  quantity         Float
+  width            Float?
+  height           Float?
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  itemDefinition   ItemDefinition? @relation(fields: [itemDefinitionId], references: [id], onDelete: Cascade)
 
   @@unique([productId, inventoryItemId])
+  @@unique([productId, itemDefinitionId])
   @@index([productId])
   @@index([inventoryItemId])
+  @@index([itemDefinitionId])
 }
 
 model Order {

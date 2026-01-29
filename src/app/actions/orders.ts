@@ -18,6 +18,7 @@ import {
   type GetOrderInput,
   type UpdateOrderStatusInput,
 } from '@/lib/schemas/orders';
+import type { MaterialRequirement } from '@/lib/types/order-material';
 
 // Helper function to format order ID as #0000
 function formatOrderId(id: number): string {
@@ -104,13 +105,135 @@ export async function getOrder(data: GetOrderInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error fetching order:', error);
     return {
       success: false,
       error: 'Nepodařilo se načíst objednávku',
+    };
+  }
+}
+
+// Get material availability for an order (requirements + status: ready / cut_needed / missing)
+export async function getOrderMaterialAvailability(data: GetOrderInput) {
+  try {
+    const validated = getOrderSchema.parse(data);
+
+    const order = await prisma.order.findUnique({
+      where: { id: validated.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                ingredients: {
+                  include: {
+                    itemDefinition: {
+                      select: { id: true, name: true, category: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return {
+        success: false,
+        error: 'Objednávka nenalezena',
+      };
+    }
+
+    // Aggregate requirements: key = (itemDefinitionId, width?, height?) -> { quantityRequired, definitionName, category }
+    type AggKey = { itemDefinitionId: number; width?: number; height?: number };
+    const aggMap = new Map<string, { key: AggKey; quantityRequired: number; definitionName: string; category: 'SHEET_MATERIAL' | 'COMPONENT' | 'OTHER' }>();
+
+    for (const orderItem of order.items) {
+      for (const ing of orderItem.product.ingredients) {
+        if (ing.itemDefinitionId == null || !ing.itemDefinition) continue;
+
+        const def = ing.itemDefinition;
+        const category = def.category as 'SHEET_MATERIAL' | 'COMPONENT' | 'OTHER';
+        const qty = orderItem.quantity * ing.quantity;
+
+        const width = ing.width ?? undefined;
+        const height = ing.height ?? undefined;
+        const key: AggKey = { itemDefinitionId: ing.itemDefinitionId, width, height };
+        const keyStr = `${key.itemDefinitionId}_${width ?? ''}_${height ?? ''}`;
+
+        const existing = aggMap.get(keyStr);
+        if (existing) {
+          existing.quantityRequired += qty;
+        } else {
+          aggMap.set(keyStr, {
+            key,
+            quantityRequired: qty,
+            definitionName: def.name,
+            category,
+          });
+        }
+      }
+    }
+
+    const requirements: MaterialRequirement[] = [];
+
+    for (const entry of aggMap.values()) {
+      const { key, quantityRequired, definitionName, category } = entry;
+      const req: MaterialRequirement = {
+        itemDefinitionId: key.itemDefinitionId,
+        definitionName,
+        category,
+        quantityRequired,
+        width: key.width,
+        height: key.height,
+        status: 'missing',
+      };
+
+      const inventoryItems = await prisma.inventoryItem.findMany({
+        where: {
+          itemDefinitionId: key.itemDefinitionId,
+          status: 'AVAILABLE',
+        },
+        select: { id: true, width: true, height: true },
+      });
+
+      if (category === 'SHEET_MATERIAL' && key.width != null && key.height != null) {
+        const reqW = key.width;
+        const reqH = key.height;
+        const exact = inventoryItems.filter((i) => i.width === reqW && i.height === reqH);
+        const larger = inventoryItems.filter((i) => i.width >= reqW && i.height >= reqH && (i.width !== reqW || i.height !== reqH));
+        req.exactCount = exact.length;
+        req.largerCount = larger.length;
+        if (exact.length >= quantityRequired) {
+          req.status = 'ready';
+        } else if (exact.length + larger.length > 0) {
+          req.status = 'cut_needed';
+        }
+      } else {
+        const count = inventoryItems.length;
+        req.status = count >= quantityRequired ? 'ready' : 'missing';
+      }
+
+      requirements.push(req);
+    }
+
+    return { success: true, data: requirements };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.issues[0]?.message || 'Neplatná data',
+      };
+    }
+    console.error('Error fetching order material availability:', error);
+    return {
+      success: false,
+      error: 'Nepodařilo se načíst dostupnost materiálu',
     };
   }
 }
@@ -143,7 +266,7 @@ export async function createOrder(data: CreateOrderInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error creating order:', error);
@@ -216,7 +339,7 @@ export async function updateOrder(data: UpdateOrderInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error updating order:', error);
@@ -257,7 +380,7 @@ export async function deleteOrder(data: DeleteOrderInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error deleting order:', error);
@@ -348,7 +471,7 @@ export async function addOrderItem(data: AddOrderItemInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error adding order item:', error);
@@ -398,7 +521,7 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
       };
     }
 
-    // Get order with items and product ingredients for inventory calculations
+    // Get order with items and product ingredients (itemDefinition + legacy inventoryItem)
     const orderWithItems = await prisma.order.findUnique({
       where: { id: validated.id },
       include: {
@@ -408,7 +531,8 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
               include: {
                 ingredients: {
                   include: {
-                    inventoryItem: true,
+                    itemDefinition: { select: { id: true } },
+                    inventoryItem: { select: { id: true, name: true, itemDefinitionId: true } },
                   },
                 },
               },
@@ -425,44 +549,59 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
       };
     }
 
+    // Build requirements: by itemDefinitionId (preferred) or by name (legacy)
+    type RequirementKey = { type: 'definition'; id: number } | { type: 'name'; name: string };
+    const requirementMap = new Map<string, number>();
+
+    for (const orderItem of orderWithItems.items) {
+      for (const ingredient of orderItem.product.ingredients) {
+        const neededQty = ingredient.quantity * orderItem.quantity;
+        let key: RequirementKey;
+        if (ingredient.itemDefinitionId != null) {
+          key = { type: 'definition', id: ingredient.itemDefinitionId };
+        } else if (ingredient.inventoryItemId != null && ingredient.inventoryItem) {
+          const inv = ingredient.inventoryItem;
+          if (inv.itemDefinitionId != null) {
+            key = { type: 'definition', id: inv.itemDefinitionId };
+          } else {
+            key = { type: 'name', name: inv.name };
+          }
+        } else {
+          continue;
+        }
+        const s = JSON.stringify(key);
+        requirementMap.set(s, (requirementMap.get(s) ?? 0) + neededQty);
+      }
+    }
+
+    const getWhereForKey = (key: RequirementKey) => {
+      if (key.type === 'definition') {
+        return { itemDefinitionId: key.id, status: 'AVAILABLE' as const, reservedQuantity: 0 };
+      }
+      return { name: key.name, status: 'AVAILABLE' as const, reservedQuantity: 0 };
+    };
+    const getWhereReservedForKey = (key: RequirementKey) => {
+      if (key.type === 'definition') {
+        return { itemDefinitionId: key.id, reservedQuantity: { gt: 0 } };
+      }
+      return { name: key.name, reservedQuantity: { gt: 0 } };
+    };
+
+    const entries: { key: RequirementKey; requiredQty: number }[] = Array.from(requirementMap.entries()).map(([s, requiredQty]) => ({
+      key: JSON.parse(s) as RequirementKey,
+      requiredQty,
+    }));
+
     // Handle inventory reservations based on status transitions
     await prisma.$transaction(async (tx) => {
-      // Calculate required inventory items for the order
-      // Group by inventoryItem ID (since ingredients reference specific items)
-      const inventoryRequirements = new Map<string, number>(); // inventoryItemId -> total quantity needed
 
-      for (const orderItem of orderWithItems.items) {
-        for (const ingredient of orderItem.product.ingredients) {
-          const currentQty = inventoryRequirements.get(ingredient.inventoryItemId) || 0;
-          const neededQty = ingredient.quantity * orderItem.quantity;
-          inventoryRequirements.set(ingredient.inventoryItemId, currentQty + neededQty);
-        }
-      }
-
-      // Handle status transitions
       if (currentStatus === 'DRAFT' && newStatus === 'IN_PROGRESS') {
-        // Reserve inventory: increment reservedQuantity on matching items
-        for (const [inventoryItemId, requiredQty] of inventoryRequirements.entries()) {
-          // Get the reference inventory item to find items with same name
-          const referenceItem = await tx.inventoryItem.findUnique({
-            where: { id: inventoryItemId },
-            select: { name: true },
-          });
-
-          if (!referenceItem) continue;
-
-          // Find available items with same name (status = AVAILABLE, reservedQuantity = 0)
+        for (const { key, requiredQty } of entries) {
           const availableItems = await tx.inventoryItem.findMany({
-            where: {
-              name: referenceItem.name,
-              status: 'AVAILABLE',
-              reservedQuantity: 0,
-            },
+            where: getWhereForKey(key),
             orderBy: { createdAt: 'asc' },
             take: Math.ceil(requiredQty),
           });
-
-          // Reserve items (set reservedQuantity = 1 for each item)
           let remainingQty = requiredQty;
           for (const item of availableItems) {
             if (remainingQty <= 0) break;
@@ -473,98 +612,54 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
             });
             remainingQty -= reserveAmount;
           }
-
           if (remainingQty > 0) {
-            console.warn(
-              `Warning: Not enough available inventory for ${referenceItem.name}. Required: ${requiredQty}, Available: ${availableItems.length}`
-            );
+            const label = key.type === 'definition' ? `definition ${key.id}` : key.name;
+            console.warn(`Warning: Not enough available inventory for ${label}. Required: ${requiredQty}, Available: ${availableItems.length}`);
           }
         }
       } else if (currentStatus === 'IN_PROGRESS' && newStatus === 'COMPLETED') {
-        // Complete order: decrement reservedQuantity and mark items as CONSUMED
-        for (const [inventoryItemId, requiredQty] of inventoryRequirements.entries()) {
-          const referenceItem = await tx.inventoryItem.findUnique({
-            where: { id: inventoryItemId },
-            select: { name: true },
-          });
-
-          if (!referenceItem) continue;
-
+        for (const { key, requiredQty } of entries) {
           const reservedItems = await tx.inventoryItem.findMany({
-            where: {
-              name: referenceItem.name,
-              reservedQuantity: { gt: 0 },
-            },
+            where: getWhereReservedForKey(key),
             orderBy: { createdAt: 'asc' },
             take: Math.ceil(requiredQty),
           });
-
           let remainingQty = requiredQty;
           for (const item of reservedItems) {
             if (remainingQty <= 0) break;
             const consumeAmount = Math.min(item.reservedQuantity, remainingQty);
             await tx.inventoryItem.update({
               where: { id: item.id },
-              data: {
-                reservedQuantity: 0,
-                status: 'CONSUMED',
-              },
+              data: { reservedQuantity: 0, status: 'CONSUMED' },
             });
             remainingQty -= consumeAmount;
           }
         }
       } else if (currentStatus === 'IN_PROGRESS' && (newStatus === 'DRAFT' || newStatus === 'CANCELLED')) {
-        // Revert/Cancel: release reservations (decrement reservedQuantity)
-        for (const [inventoryItemId, requiredQty] of inventoryRequirements.entries()) {
-          const referenceItem = await tx.inventoryItem.findUnique({
-            where: { id: inventoryItemId },
-            select: { name: true },
-          });
-
-          if (!referenceItem) continue;
-
+        for (const { key, requiredQty } of entries) {
           const reservedItems = await tx.inventoryItem.findMany({
-            where: {
-              name: referenceItem.name,
-              reservedQuantity: { gt: 0 },
-            },
+            where: getWhereReservedForKey(key),
             orderBy: { createdAt: 'asc' },
             take: Math.ceil(requiredQty),
           });
-
           let remainingQty = requiredQty;
           for (const item of reservedItems) {
             if (remainingQty <= 0) break;
             const releaseAmount = Math.min(item.reservedQuantity, remainingQty);
             await tx.inventoryItem.update({
               where: { id: item.id },
-              data: {
-                reservedQuantity: Math.max(0, item.reservedQuantity - releaseAmount),
-              },
+              data: { reservedQuantity: Math.max(0, item.reservedQuantity - releaseAmount) },
             });
             remainingQty -= releaseAmount;
           }
         }
       } else if (currentStatus === 'COMPLETED' && newStatus === 'IN_PROGRESS') {
-        // Reopen completed order: reserve inventory again
-        for (const [inventoryItemId, requiredQty] of inventoryRequirements.entries()) {
-          const referenceItem = await tx.inventoryItem.findUnique({
-            where: { id: inventoryItemId },
-            select: { name: true },
-          });
-
-          if (!referenceItem) continue;
-
+        for (const { key, requiredQty } of entries) {
           const availableItems = await tx.inventoryItem.findMany({
-            where: {
-              name: referenceItem.name,
-              status: 'AVAILABLE',
-              reservedQuantity: 0,
-            },
+            where: getWhereForKey(key),
             orderBy: { createdAt: 'asc' },
             take: Math.ceil(requiredQty),
           });
-
           let remainingQty = requiredQty;
           for (const item of availableItems) {
             if (remainingQty <= 0) break;
@@ -577,8 +672,7 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
           }
         }
       } else if (currentStatus === 'CANCELLED' && newStatus === 'DRAFT') {
-        // Restore cancelled order: no inventory changes needed (was already released)
-        // Just update status
+        // No inventory change
       }
 
       // Update order status
@@ -607,6 +701,13 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
       },
     });
 
+    if (!order) {
+      return {
+        success: false,
+        error: 'Objednávka nenalezena',
+      };
+    }
+
     const statusMessages: Record<string, string> = {
       IN_PROGRESS: 'Objednávka byla zahájena',
       COMPLETED: 'Objednávka byla dokončena',
@@ -634,7 +735,7 @@ export async function updateOrderStatus(data: UpdateOrderStatusInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error updating order status:', error);
@@ -675,7 +776,7 @@ export async function removeOrderItem(data: RemoveOrderItemInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error removing order item:', error);

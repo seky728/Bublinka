@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // OrderStatus enum for validation
 const orderStatusEnum = z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], {
-  errorMap: () => ({ message: 'Neplatný status objednávky' }),
+  error: 'Neplatný status objednávky',
 });
 
 // Validation schemas

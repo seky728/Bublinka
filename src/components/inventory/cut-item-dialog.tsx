@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -54,7 +54,7 @@ export function CutItemDialog({
     setValue,
     reset,
   } = useForm<CutItemForm>({
-    resolver: zodResolver(cutItemSchema),
+    resolver: zodResolver(cutItemSchema) as Resolver<CutItemForm>,
     defaultValues: {
       direction: 'horizontal',
       saveMainRemnant: true,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -18,10 +18,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createProduct, uploadProductImage } from '@/app/actions/products';
 import { type CreateProductInput } from '@/lib/schemas/products';
-import { getInventoryItems } from '@/app/actions/inventory';
-import { RecipeEditor, type RecipeIngredient } from './recipe-editor';
+import { getAllItemDefinitions } from '@/app/actions/item-definitions';
+import { RecipeEditor, type RecipeIngredient, type RecipeIngredientErrors } from './recipe-editor';
 import { useToast } from '@/hooks/use-toast';
-import type { InventoryItem } from '@prisma/client';
+import type { ItemDefinition } from '@prisma/client';
 import { ImageIcon } from 'lucide-react';
 
 const createProductFormSchema = z.object({
@@ -50,10 +50,8 @@ export function CreateProductDialog({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
-  const [availableItems, setAvailableItems] = useState<InventoryItem[]>([]);
-  const [ingredientErrors, setIngredientErrors] = useState<
-    Array<{ inventoryItemId?: string; quantity?: string }>
-  >([]);
+  const [definitions, setDefinitions] = useState<ItemDefinition[]>([]);
+  const [ingredientErrors, setIngredientErrors] = useState<RecipeIngredientErrors[]>([]);
   const { toast } = useToast();
 
   const {
@@ -63,27 +61,21 @@ export function CreateProductDialog({
     reset,
     watch,
   } = useForm<CreateProductForm>({
-    resolver: zodResolver(createProductFormSchema),
+    resolver: zodResolver(createProductFormSchema) as Resolver<CreateProductForm>,
     defaultValues: {
       description: '',
       productionSteps: '',
     },
   });
 
-  // Fetch available inventory items
+  // Fetch item definitions for recipe (catalog)
   useEffect(() => {
     if (open) {
-      const loadItems = async () => {
-        const result = await getInventoryItems();
+      getAllItemDefinitions().then((result) => {
         if (result.success && result.data) {
-          // Filter only AVAILABLE items
-          const available = result.data.filter(
-            (item) => item.status === 'AVAILABLE',
-          );
-          setAvailableItems(available);
+          setDefinitions(result.data);
         }
-      };
-      loadItems();
+      });
     }
   }, [open]);
 
@@ -147,8 +139,7 @@ export function CreateProductDialog({
   };
 
   const onSubmit = async (data: CreateProductForm) => {
-    // Validate ingredients
-    const errors: Array<{ inventoryItemId?: string; quantity?: string }> = [];
+    const errors: RecipeIngredientErrors[] = [];
     let hasErrors = false;
 
     if (ingredients.length === 0) {
@@ -161,14 +152,26 @@ export function CreateProductDialog({
     }
 
     ingredients.forEach((ingredient, index) => {
-      const error: { inventoryItemId?: string; quantity?: string } = {};
-      if (!ingredient.inventoryItemId) {
-        error.inventoryItemId = 'Vyberte položku skladu';
+      const error: RecipeIngredientErrors = {};
+      const def = definitions.find((d) => d.id === ingredient.itemDefinitionId);
+
+      if (!ingredient.itemDefinitionId || ingredient.itemDefinitionId <= 0) {
+        error.itemDefinitionId = 'Vyberte definici položky';
         hasErrors = true;
       }
       if (!ingredient.quantity || ingredient.quantity <= 0) {
         error.quantity = 'Množství musí být kladné číslo';
         hasErrors = true;
+      }
+      if (def?.category === 'SHEET_MATERIAL') {
+        if (ingredient.width == null || ingredient.width <= 0) {
+          error.width = 'Šířka je povinná u deskového materiálu';
+          hasErrors = true;
+        }
+        if (ingredient.height == null || ingredient.height <= 0) {
+          error.height = 'Výška je povinná u deskového materiálu';
+          hasErrors = true;
+        }
       }
       errors.push(error);
     });
@@ -196,14 +199,18 @@ export function CreateProductDialog({
         }
       }
 
-      // Create product
       const productData: CreateProductInput = {
         name: data.name,
         description: data.description || undefined,
         sellingPrice: data.sellingPrice,
         productionSteps: data.productionSteps || undefined,
         photoUrl: finalPhotoPath || undefined,
-        ingredients: ingredients,
+        ingredients: ingredients.map((i) => ({
+          itemDefinitionId: i.itemDefinitionId,
+          quantity: i.quantity,
+          width: i.width ?? undefined,
+          height: i.height ?? undefined,
+        })),
       };
 
       const result = await createProduct(productData);
@@ -345,7 +352,7 @@ export function CreateProductDialog({
             <RecipeEditor
               ingredients={ingredients}
               onChange={setIngredients}
-              availableItems={availableItems}
+              definitions={definitions}
               errors={ingredientErrors}
             />
           </div>

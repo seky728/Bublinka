@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { getProducts, deleteProduct } from '../actions/products';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ImageIcon, Pencil } from 'lucide-react';
 import { CreateProductDialog } from '@/components/products/create-product-dialog';
+import { EditProductDialog } from '@/components/products/edit-product-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Product } from '@prisma/client';
 
@@ -12,7 +13,10 @@ type ProductWithIngredients = Product & {
   ingredients: Array<{
     id: string;
     quantity: number;
-    inventoryItem: {
+    width?: number | null;
+    height?: number | null;
+    itemDefinition?: { id: number; name: string; category: string } | null;
+    inventoryItem?: {
       id: string;
       name: string;
       width: number;
@@ -20,14 +24,28 @@ type ProductWithIngredients = Product & {
       thickness: number;
       price: number;
       status: string;
-    };
+    } | null;
   }>;
 };
+
+function formatIngredientLine(
+  name: string,
+  quantity: number,
+  width?: number | null,
+  height?: number | null,
+): string {
+  if (width != null && height != null && width > 0 && height > 0) {
+    return `${name} (${width} × ${height} mm) – ${quantity} ks`;
+  }
+  return `${quantity}× ${name}`;
+}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductWithIngredients[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -56,6 +74,21 @@ export default function ProductsPage() {
     toast({
       title: 'Úspěch',
       description: 'Produkt byl úspěšně vytvořen',
+    });
+  };
+
+  const handleEditClick = (id: string) => {
+    setEditingProductId(id);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditDialogOpen(false);
+    setEditingProductId(null);
+    loadProducts();
+    toast({
+      title: 'Úspěch',
+      description: 'Produkt byl úspěšně upraven',
     });
   };
 
@@ -149,7 +182,14 @@ export default function ProductsPage() {
                     <div className='text-xs space-y-1'>
                       {product.ingredients.slice(0, 3).map((ingredient) => (
                         <div key={ingredient.id}>
-                          {ingredient.quantity}x {ingredient.inventoryItem.name}
+                          {formatIngredientLine(
+                            ingredient.itemDefinition?.name ??
+                              ingredient.inventoryItem?.name ??
+                              '—',
+                            ingredient.quantity,
+                            ingredient.width,
+                            ingredient.height,
+                          )}
                         </div>
                       ))}
                       {product.ingredients.length > 3 && (
@@ -163,6 +203,15 @@ export default function ProductsPage() {
 
                 {/* Actions */}
                 <div className='flex gap-2 mt-4'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => handleEditClick(product.id)}
+                    className='flex-1'
+                  >
+                    <Pencil className='h-4 w-4 mr-2' />
+                    Upravit
+                  </Button>
                   <Button
                     variant='destructive'
                     size='sm'
@@ -184,6 +233,12 @@ export default function ProductsPage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleCreateSuccess}
+      />
+      <EditProductDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={handleEditSuccess}
+        productId={editingProductId}
       />
     </div>
   );

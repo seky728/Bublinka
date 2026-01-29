@@ -5,8 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
 import {
   createProductSchema,
+  updateProductSchema,
   deleteProductSchema,
+  getProductSchema,
   type CreateProductInput,
+  type UpdateProductInput,
 } from '@/lib/schemas/products';
 
 // Get all products with their ingredients
@@ -19,6 +22,13 @@ export async function getProducts() {
       include: {
         ingredients: {
           include: {
+            itemDefinition: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
             inventoryItem: {
               select: {
                 id: true,
@@ -91,21 +101,31 @@ export async function createProduct(data: CreateProductInput) {
         },
       });
 
-      // Create ingredients
+      // Create ingredients (definition-based; inventoryItemId left null)
       await tx.productIngredient.createMany({
         data: validated.ingredients.map((ingredient) => ({
           productId: newProduct.id,
-          inventoryItemId: ingredient.inventoryItemId,
+          itemDefinitionId: ingredient.itemDefinitionId,
+          inventoryItemId: null,
           quantity: ingredient.quantity,
+          width: ingredient.width ?? null,
+          height: ingredient.height ?? null,
         })),
       });
 
-      // Return product with ingredients
+      // Return product with ingredients (itemDefinition + legacy inventoryItem)
       return await tx.product.findUnique({
         where: { id: newProduct.id },
         include: {
           ingredients: {
             include: {
+              itemDefinition: {
+                select: {
+                  id: true,
+                  name: true,
+                  category: true,
+                },
+              },
               inventoryItem: {
                 select: {
                   id: true,
@@ -132,13 +152,173 @@ export async function createProduct(data: CreateProductInput) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error creating product:', error);
     return {
       success: false,
       error: 'Nepodařilo se vytvořit produkt',
+    };
+  }
+}
+
+// Get single product with ingredients (for editing)
+export async function getProduct(id: string) {
+  try {
+    const validated = getProductSchema.parse({ id });
+
+    const product = await prisma.product.findUnique({
+      where: { id: validated.id },
+      include: {
+        ingredients: {
+          include: {
+            itemDefinition: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+            inventoryItem: {
+              select: {
+                id: true,
+                name: true,
+                width: true,
+                height: true,
+                thickness: true,
+                price: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return {
+        success: false,
+        error: 'Produkt nenalezen',
+      };
+    }
+
+    // Add signed URL for display; keep photoUrl as path for form submit
+    if (product.photoUrl) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('products')
+          .createSignedUrl(product.photoUrl, 3600);
+
+        if (!error && data?.signedUrl) {
+          return {
+            success: true,
+            data: { ...product, imageUrl: data.signedUrl } as typeof product & {
+              imageUrl: string;
+            },
+          };
+        }
+      } catch (e) {
+        console.error('Error generating signed URL for product:', product.id, e);
+      }
+    }
+
+    return {
+      success: true,
+      data: { ...product, imageUrl: null } as typeof product & { imageUrl: string | null },
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.issues[0]?.message || 'Neplatná data',
+      };
+    }
+    console.error('Error fetching product:', error);
+    return {
+      success: false,
+      error: 'Nepodařilo se načíst produkt',
+    };
+  }
+}
+
+// Update product and replace ingredients
+export async function updateProduct(data: UpdateProductInput) {
+  try {
+    const validated = updateProductSchema.parse(data);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id: validated.id },
+        data: {
+          name: validated.name,
+          description: validated.description ?? null,
+          sellingPrice: validated.sellingPrice,
+          productionSteps: validated.productionSteps ?? null,
+          photoUrl: validated.photoUrl ?? undefined,
+        },
+      });
+
+      await tx.productIngredient.deleteMany({
+        where: { productId: validated.id },
+      });
+
+      await tx.productIngredient.createMany({
+        data: validated.ingredients.map((ingredient) => ({
+          productId: validated.id,
+          itemDefinitionId: ingredient.itemDefinitionId,
+          inventoryItemId: null,
+          quantity: ingredient.quantity,
+          width: ingredient.width ?? null,
+          height: ingredient.height ?? null,
+        })),
+      });
+
+      return await tx.product.findUnique({
+        where: { id: validated.id },
+        include: {
+          ingredients: {
+            include: {
+              itemDefinition: {
+                select: {
+                  id: true,
+                  name: true,
+                  category: true,
+                },
+              },
+              inventoryItem: {
+                select: {
+                  id: true,
+                  name: true,
+                  width: true,
+                  height: true,
+                  thickness: true,
+                  price: true,
+                  status: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    return {
+      success: true,
+      data: updated,
+      message: 'Produkt byl úspěšně upraven',
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.issues[0]?.message || 'Neplatná data',
+      };
+    }
+    console.error('Error updating product:', error);
+    return {
+      success: false,
+      error: 'Nepodařilo se upravit produkt',
     };
   }
 }
@@ -193,7 +373,7 @@ export async function deleteProduct(data: z.infer<typeof deleteProductSchema>) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || 'Neplatná data',
+        error: error.issues[0]?.message || 'Neplatná data',
       };
     }
     console.error('Error deleting product:', error);
