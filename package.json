@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:start:local": "sudo service postgresql start",
+    "db:test:reset": "dotenv -e .env.test -- prisma db push --force-reset",
+    "db:test:push": "dotenv -e .env.test -- prisma db push",
+    "test:e2e": "npm run db:test:reset && playwright test",
+    "test:e2e:ui": "npm run db:test:reset && playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -35,11 +40,13 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
     "shadcn-ui": "^0.9.5",
