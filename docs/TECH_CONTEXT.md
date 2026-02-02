@@ -454,6 +454,138 @@ ProductIngredient is the Bill of Materials (BOM) for a product. New recipes use 
 
 **Validation**: `src/lib/schemas/orders.ts` (createOrder, updateOrder, deleteOrder, addOrderItem, removeOrderItem, getOrder, updateOrderStatus)
 
+## E2E Testing
+
+### Playwright Configuration
+
+**Location**: `playwright.config.ts`
+
+The project uses **Playwright** for end-to-end testing. All interactive elements across the application have been annotated with `data-testid` attributes to enable reliable test selectors.
+
+### Test ID Naming Convention
+
+All `data-testid` attributes follow a strict naming convention: `[context]-[element-role]` in kebab-case.
+
+**Examples:**
+- `inventory-submit-btn` - Submit button in inventory context
+- `catalog-definition-row` - Table row for a catalog definition
+- `order-status-badge-draft` - Status badge for DRAFT status
+- `product-name-input` - Name input in product form
+
+### Components with Test IDs
+
+#### Inventory Components
+- **Add Item Dialog** (`src/components/inventory/add-item-dialog.tsx`):
+  - `inventory-item-definition-select` - ItemDefinition combobox
+  - `inventory-note-input` - Note input field
+  - `inventory-width-input`, `inventory-height-input`, `inventory-thickness-input` - Dimension inputs
+  - `inventory-quantity-input` - Quantity input
+  - `inventory-total-price-input` - Total price input
+  - `inventory-cancel-btn`, `inventory-submit-btn` - Dialog buttons
+
+- **Cut Item Dialog** (`src/components/inventory/cut-item-dialog.tsx`):
+  - `cut-width-input`, `cut-height-input` - Cut dimension inputs
+  - `cut-direction-radio` - Direction radio group
+  - `cut-direction-horizontal`, `cut-direction-vertical` - Direction options
+  - `cut-consume-whole-btn` - Consume whole button
+  - `cut-save-main-remnant-checkbox`, `cut-save-secondary-remnant-checkbox` - Remnant checkboxes
+  - `cut-cancel-btn`, `cut-submit-btn` - Dialog buttons
+
+#### Orders Components
+- **Create Order Dialog** (`src/components/orders/create-order-dialog.tsx`):
+  - `order-name-input` - Order name input
+  - `order-cancel-btn`, `order-submit-btn` - Dialog buttons
+
+- **Order Status Badge** (`src/components/orders/order-status-badge.tsx`):
+  - `order-status-badge-[status]` - Dynamic badge (e.g., `order-status-badge-draft`, `order-status-badge-in_progress`)
+
+- **Material Check** (`src/components/orders/material-check.tsx`):
+  - `material-requirement-row` - Each material requirement list item
+  - `material-status-badge-[status]` - Status badges (ready, cut_needed, missing)
+  - `material-resolve-btn` - "Vyřešit" button for cut-needed items
+
+- **Cut Allocation Dialog** (`src/components/orders/cut-allocation-dialog.tsx`):
+  - `cut-allocation-board-option` - Source board selection buttons
+  - `cut-allocation-cancel-btn`, `cut-allocation-submit-btn` - Dialog buttons
+
+#### Products Components
+- **Create Product Dialog** (`src/components/products/create-product-dialog.tsx`):
+  - `product-name-input`, `product-description-input`, `product-selling-price-input`, `product-production-steps-input` - Form inputs
+  - `product-image-input` - File upload input
+  - `product-cancel-btn`, `product-submit-btn` - Dialog buttons
+
+- **Edit Product Dialog** (`src/components/products/edit-product-dialog.tsx`):
+  - `product-edit-name-input`, `product-edit-description-input`, `product-edit-selling-price-input`, `product-edit-production-steps-input` - Form inputs
+  - `product-edit-image-input` - File upload input
+  - `product-edit-cancel-btn`, `product-edit-submit-btn` - Dialog buttons
+
+- **Recipe Editor** (`src/components/products/recipe-editor.tsx`):
+  - `recipe-add-ingredient-btn` - Add ingredient button
+  - `recipe-ingredient-row` - Each ingredient table row
+  - `recipe-ingredient-definition-[index]` - ItemDefinition combobox per ingredient
+  - `recipe-ingredient-width-[index]`, `recipe-ingredient-height-[index]`, `recipe-ingredient-quantity-[index]` - Ingredient inputs
+  - `recipe-remove-ingredient-[index]` - Remove ingredient button
+
+#### Settings Components
+- **Definition Dialog** (`src/components/settings/definition-dialog.tsx`):
+  - `definition-name-input`, `definition-description-input`, `definition-properties-input` - Form inputs
+  - `definition-category-radio` - Category radio group
+  - `definition-category-[category]` - Category options (e.g., `definition-category-sheet_material`)
+  - `definition-cancel-btn`, `definition-submit-btn` - Dialog buttons
+
+#### Layout Components
+- **Sidebar** (`src/components/layout/Sidebar.tsx`):
+  - `sidebar-nav-[route]` - Navigation buttons (e.g., `sidebar-nav-inventory`, `sidebar-nav-products`)
+  - `sidebar-toggle-btn` - Collapse/expand toggle button
+
+#### Pages
+- **Catalog Page** (`src/app/catalog/page.tsx`):
+  - `catalog-add-btn`, `catalog-add-first-btn` - Add definition buttons
+  - `catalog-definition-row` - Definition table rows
+  - `catalog-edit-btn`, `catalog-delete-btn` - Action buttons
+
+- **Inventory Page** (`src/app/inventory/page.tsx`):
+  - `inventory-add-btn` - Add material button
+  - `inventory-row` - Inventory table rows
+  - `inventory-status-badge` - Status badges
+  - `inventory-cut-btn` - Cut button per row
+
+- **Products Page** (`src/app/products/page.tsx`):
+  - `products-add-btn`, `products-add-first-btn` - Add product buttons
+  - `products-edit-btn`, `products-delete-btn` - Action buttons
+
+- **Orders Page** (`src/app/orders/page.tsx`):
+  - `orders-create-btn`, `orders-create-first-btn` - Create order buttons
+  - `order-row` - Order table rows
+  - `orders-delete-btn` - Delete button
+
+- **Order Detail Page** (`src/app/orders/[id]/page.tsx`):
+  - `order-back-btn` - Back to orders list button
+  - `order-name-input` - Editable order name input
+  - `order-status-[status]-btn` - Status action buttons (e.g., `order-status-draft-btn`)
+  - `order-delete-btn` - Delete order button
+  - `order-product-select` - Product combobox
+  - `order-quantity-input` - Quantity input
+  - `order-add-item-btn` - Add item button
+  - `order-item-row` - Order item table rows
+  - `order-remove-item-btn` - Remove item button
+  - `order-restore-draft-btn`, `order-return-progress-btn` - Status banner buttons
+
+- **Home Page** (`src/app/page.tsx`):
+  - `home-inventory-btn`, `home-products-btn` - Navigation buttons
+
+### UI Component Updates
+
+The **Combobox** component (`src/components/ui/combobox.tsx`) has been updated to accept and pass through the `data-testid` prop to its trigger button, enabling test selection of combobox elements.
+
+### Testing Best Practices
+
+1. **Use data-testid for all interactive elements**: Buttons, inputs, selects, checkboxes, radio buttons, table rows, and status badges
+2. **Follow naming convention**: Always use `[context]-[element-role]` format
+3. **Keep IDs descriptive but concise**: Balance clarity with brevity
+4. **Use dynamic IDs for lists**: When elements appear in lists, include index or identifier (e.g., `recipe-ingredient-width-0`)
+5. **Status-specific IDs**: Use dynamic values for status badges (e.g., `order-status-badge-${status.toLowerCase()}`)
+
 ### 🔧 Technical Implementation Details
 
 - **Server Actions**: All database operations use Next.js server actions

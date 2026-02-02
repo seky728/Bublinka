@@ -165,6 +165,7 @@ export function AddItemDialog({
                 placeholder="Vyberte z katalogu"
                 searchPlaceholder="Hledat definici..."
                 emptyText="Žádné definice. Nejdřív přidejte definice v Katalogu."
+                data-testid="inventory-item-definition-select"
               />
               {errors.itemDefinitionId && (
                 <p className="text-sm text-red-500">
@@ -187,6 +188,7 @@ export function AddItemDialog({
                 id="note"
                 {...register('note')}
                 placeholder="Např. dodávka 1"
+                data-testid="inventory-note-input"
               />
             </div>
 
@@ -199,6 +201,7 @@ export function AddItemDialog({
                   step="0.01"
                   {...register('width')}
                   placeholder="0"
+                  data-testid="inventory-width-input"
                 />
                 {errors.width && (
                   <p className="text-sm text-red-500">{errors.width.message}</p>
@@ -212,6 +215,7 @@ export function AddItemDialog({
                   step="0.01"
                   {...register('height')}
                   placeholder="0"
+                  data-testid="inventory-height-input"
                 />
                 {errors.height && (
                   <p className="text-sm text-red-500">
@@ -227,6 +231,7 @@ export function AddItemDialog({
                   step="0.01"
                   {...register('thickness')}
                   placeholder="0"
+                  data-testid="inventory-thickness-input"
                 />
                 {errors.thickness && (
                   <p className="text-sm text-red-500">
@@ -244,6 +249,7 @@ export function AddItemDialog({
                   type="number"
                   {...register('quantity')}
                   placeholder="1"
+                  data-testid="inventory-quantity-input"
                 />
                 {errors.quantity && (
                   <p className="text-sm text-red-500">
@@ -259,6 +265,7 @@ export function AddItemDialog({
                   step="0.01"
                   {...register('totalPrice')}
                   placeholder="0"
+                  data-testid="inventory-total-price-input"
                 />
                 {errors.totalPrice && (
                   <p className="text-sm text-red-500">
@@ -288,10 +295,11 @@ export function AddItemDialog({
                 reset();
                 onOpenChange(false);
               }}
+              data-testid="inventory-cancel-btn"
             >
               Zrušit
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} data-testid="inventory-submit-btn">
               {loading ? 'Přidávám...' : 'Přidat'}
             </Button>
           </DialogFooter>

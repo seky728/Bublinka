@@ -46,6 +46,7 @@ function StatusBadge({ status }: { status: MaterialAvailabilityStatus }) {
         'px-2 py-1 rounded text-xs font-medium shrink-0',
         config.className
       )}
+      data-testid={`material-status-badge-${status}`}
     >
       {config.label}
     </span>
@@ -131,6 +132,7 @@ export function MaterialCheck({ orderId, onResolved }: MaterialCheckProps) {
           <li
             key={`${req.itemDefinitionId}_${req.width ?? ''}_${req.height ?? ''}_${index}`}
             className="flex flex-wrap items-center gap-3 py-2 border-b last:border-b-0"
+            data-testid="material-requirement-row"
           >
             <span className="font-medium">{req.definitionName}</span>
             <span className="text-sm text-muted-foreground">
@@ -143,6 +145,7 @@ export function MaterialCheck({ orderId, onResolved }: MaterialCheckProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setCutDialogRequirement(req)}
+                data-testid="material-resolve-btn"
               >
                 Vyřešit
               </Button>

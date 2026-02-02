@@ -24,6 +24,7 @@ interface ComboboxProps {
   searchPlaceholder?: string;
   emptyText?: string;
   className?: string;
+  'data-testid'?: string;
 }
 
 export function Combobox({
@@ -34,6 +35,7 @@ export function Combobox({
   searchPlaceholder = 'Hledat...',
   emptyText = 'Žádné výsledky',
   className,
+  'data-testid': dataTestId,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -64,6 +66,7 @@ export function Combobox({
           role='combobox'
           aria-expanded={open}
           className={cn('w-full justify-between', className)}
+          data-testid={dataTestId}
         >
           {selectedOption ? selectedOption.label : placeholder}
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />

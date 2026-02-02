@@ -78,6 +78,7 @@ export function Sidebar() {
                   isCollapsed ? 'justify-center px-0' : 'justify-start',
                   isActive && 'bg-accent text-accent-foreground'
                 )}
+                data-testid={`sidebar-nav-${item.href.replace('/', '') || 'home'}`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span
@@ -119,6 +120,7 @@ export function Sidebar() {
             size="icon"
             className="h-10 w-10 rounded-full bg-background border border-border shadow-sm hover:bg-accent hover:shadow-md transition-all duration-200"
             onClick={() => setIsCollapsed(!isCollapsed)}
+            data-testid="sidebar-toggle-btn"
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />

@@ -188,6 +188,7 @@ export function DefinitionDialog({
               id="name"
               {...register('name')}
               placeholder="např. Bříza 18mm"
+              data-testid="definition-name-input"
             />
             {errors.name && (
               <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -202,10 +203,11 @@ export function DefinitionDialog({
                 setValue('category', value as DefinitionForm['category'])
               }
               className="flex flex-col gap-2"
+              data-testid="definition-category-radio"
             >
               {CATEGORY_OPTIONS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={opt.value} id={opt.value} />
+                  <RadioGroupItem value={opt.value} id={opt.value} data-testid={`definition-category-${opt.value.toLowerCase()}`} />
                   <Label htmlFor={opt.value} className="font-normal cursor-pointer">
                     {opt.label}
                   </Label>
@@ -226,6 +228,7 @@ export function DefinitionDialog({
               {...register('description')}
               placeholder="Volitelný popis"
               rows={2}
+              data-testid="definition-description-input"
             />
             {errors.description && (
               <p className="text-sm text-destructive">
@@ -242,6 +245,7 @@ export function DefinitionDialog({
               placeholder='{"tloušťka": 18} nebo {"barva": "stříbrná"}'
               rows={3}
               className="font-mono text-sm"
+              data-testid="definition-properties-input"
             />
             <p className="text-xs text-muted-foreground">
               Zadejte JSON objekt, např. {`{"tloušťka": 18}`}
@@ -259,10 +263,11 @@ export function DefinitionDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              data-testid="definition-cancel-btn"
             >
               Zrušit
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} data-testid="definition-submit-btn">
               {loading ? 'Ukládám...' : isEdit ? 'Uložit' : 'Vytvořit'}
             </Button>
           </DialogFooter>

@@ -153,6 +153,7 @@ export function CutAllocationDialog({
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:bg-muted/50'
                     )}
+                    data-testid="cut-allocation-board-option"
                   >
                     <span className="font-medium">{board.name}</span>
                     <span className="text-muted-foreground ml-2">
@@ -171,6 +172,7 @@ export function CutAllocationDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
+            data-testid="cut-allocation-cancel-btn"
           >
             Zrušit
           </Button>
@@ -178,6 +180,7 @@ export function CutAllocationDialog({
             type="button"
             onClick={handleCut}
             disabled={loading || boards.length === 0 || !selectedId || submitting}
+            data-testid="cut-allocation-submit-btn"
           >
             {submitting ? 'Probíhá řez...' : 'Nařezat'}
           </Button>

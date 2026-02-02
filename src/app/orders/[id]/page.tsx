@@ -383,6 +383,7 @@ export default function OrderDetailPage() {
           variant='ghost'
           size='icon'
           onClick={() => router.push('/orders')}
+          data-testid="order-back-btn"
         >
           <ArrowLeft className='h-4 w-4' />
         </Button>
@@ -395,6 +396,7 @@ export default function OrderDetailPage() {
               onKeyDown={handleNameKeyDown}
               className='text-2xl font-bold h-auto py-2'
               autoFocus
+              data-testid="order-name-input"
             />
           ) : (
             <h1
@@ -428,6 +430,7 @@ export default function OrderDetailPage() {
               variant={action.variant}
               onClick={() => handleStatusChange(action.status)}
               disabled={updatingStatus}
+              data-testid={`order-status-${action.status.toLowerCase()}-btn`}
             >
               {action.icon}
               {action.label}
@@ -437,6 +440,7 @@ export default function OrderDetailPage() {
             variant='destructive'
             onClick={handleDelete}
             disabled={updating}
+            data-testid="order-delete-btn"
           >
             <Trash2 className='h-4 w-4 mr-2' />
             Smazat
@@ -456,6 +460,7 @@ export default function OrderDetailPage() {
                 onValueChange={setSelectedProductId}
                 placeholder='Vyberte produkt...'
                 emptyText='Žádné dostupné produkty'
+                data-testid="order-product-select"
               />
             </div>
             <div className='w-32'>
@@ -465,11 +470,13 @@ export default function OrderDetailPage() {
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder='Množství'
+                data-testid="order-quantity-input"
               />
             </div>
             <Button
               onClick={handleAddItem}
               disabled={addingItem || !selectedProductId || !quantity}
+              data-testid="order-add-item-btn"
             >
               {addingItem ? (
                 'Přidávání...'
@@ -501,6 +508,7 @@ export default function OrderDetailPage() {
             size='sm'
             onClick={() => handleStatusChange('DRAFT')}
             disabled={updatingStatus}
+            data-testid="order-restore-draft-btn"
           >
             <RotateCcw className='h-4 w-4 mr-2' />
             Obnovit do návrhu
@@ -519,6 +527,7 @@ export default function OrderDetailPage() {
             size='sm'
             onClick={() => handleStatusChange('IN_PROGRESS')}
             disabled={updatingStatus}
+            data-testid="order-return-progress-btn"
           >
             <RotateCcw className='h-4 w-4 mr-2' />
             Vrátit do výroby
@@ -556,7 +565,7 @@ export default function OrderDetailPage() {
             </TableHeader>
             <TableBody>
               {order.items.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} data-testid="order-item-row">
                   <TableCell className='font-medium'>
                     {item.product.name}
                   </TableCell>
@@ -572,6 +581,7 @@ export default function OrderDetailPage() {
                         size='icon'
                         onClick={() => handleRemoveItem(item.id)}
                         disabled={removingItemId === item.id}
+                        data-testid="order-remove-item-btn"
                       >
                         {removingItemId === item.id ? (
                           '...'

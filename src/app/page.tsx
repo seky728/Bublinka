@@ -9,13 +9,13 @@ export default function Home() {
         <h1 className="text-5xl font-bold tracking-tight">Bublinka ERP</h1>
         <div className="flex flex-col sm:flex-row gap-4">
           <Link href="/inventory">
-            <Button size="lg" className="h-20 w-64 text-lg">
+            <Button size="lg" className="h-20 w-64 text-lg" data-testid="home-inventory-btn">
               <Package className="h-6 w-6 mr-2" />
               Otevřít Sklad
             </Button>
           </Link>
           <Link href="/products">
-            <Button size="lg" className="h-20 w-64 text-lg">
+            <Button size="lg" className="h-20 w-64 text-lg" data-testid="home-products-btn">
               <ShoppingBag className="h-6 w-6 mr-2" />
               Otevřít Produkty
             </Button>

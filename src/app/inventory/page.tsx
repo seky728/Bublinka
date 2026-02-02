@@ -154,7 +154,7 @@ export default function InventoryPage() {
     <div className='container mx-auto py-8 px-4'>
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-3xl font-bold'>Sklad</h1>
-        <Button onClick={() => setAddDialogOpen(true)}>
+        <Button onClick={() => setAddDialogOpen(true)} data-testid="inventory-add-btn">
           <Plus className='h-4 w-4 mr-2' />
           Přidat materiál
         </Button>
@@ -189,7 +189,7 @@ export default function InventoryPage() {
                 </TableRow>
               ) : (
                 groups.map((group) => (
-                  <TableRow key={group.groupKey}>
+                  <TableRow key={group.groupKey} data-testid="inventory-row">
                     <TableCell className='font-medium'>{group.name}</TableCell>
                     <TableCell>
                       {group.sampleItem.width} × {group.sampleItem.height} × {group.sampleItem.thickness}
@@ -212,7 +212,7 @@ export default function InventoryPage() {
                       {(() => {
                         const { label, className } = getInventoryStatusDisplay(group);
                         return (
-                          <span className={`px-2 py-1 rounded text-xs ${className}`}>
+                          <span className={`px-2 py-1 rounded text-xs ${className}`} data-testid="inventory-status-badge">
                             {label}
                           </span>
                         );
@@ -232,6 +232,7 @@ export default function InventoryPage() {
                           }
                         }}
                         disabled={group.available <= 0}
+                        data-testid="inventory-cut-btn"
                       >
                         Řezat
                       </Button>

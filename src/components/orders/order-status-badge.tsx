@@ -38,6 +38,7 @@ export function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
         config.className,
         className
       )}
+      data-testid={`order-status-badge-${status.toLowerCase()}`}
     >
       {config.label}
     </span>

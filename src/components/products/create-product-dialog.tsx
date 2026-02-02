@@ -258,6 +258,7 @@ export function CreateProductDialog({
                 id='name'
                 {...register('name')}
                 placeholder='Např. Stůl'
+                data-testid="product-name-input"
               />
               {errors.name && (
                 <p className='text-sm text-red-500'>{errors.name.message}</p>
@@ -271,6 +272,7 @@ export function CreateProductDialog({
                 {...register('description')}
                 placeholder='Popis produktu...'
                 rows={3}
+                data-testid="product-description-input"
               />
               {errors.description && (
                 <p className='text-sm text-red-500'>
@@ -287,6 +289,7 @@ export function CreateProductDialog({
                 step='0.01'
                 {...register('sellingPrice')}
                 placeholder='0.00'
+                data-testid="product-selling-price-input"
               />
               {errors.sellingPrice && (
                 <p className='text-sm text-red-500'>
@@ -302,6 +305,7 @@ export function CreateProductDialog({
                 {...register('productionSteps')}
                 placeholder='Popis výrobních kroků...'
                 rows={4}
+                data-testid="product-production-steps-input"
               />
               {errors.productionSteps && (
                 <p className='text-sm text-red-500'>
@@ -320,6 +324,7 @@ export function CreateProductDialog({
                     accept='image/*'
                     onChange={handleImageChange}
                     className='cursor-pointer'
+                    data-testid="product-image-input"
                   />
                 </div>
                 {imagePreview && (
@@ -363,10 +368,11 @@ export function CreateProductDialog({
               variant='outline'
               onClick={() => onOpenChange(false)}
               disabled={loading || uploadingImage}
+              data-testid="product-cancel-btn"
             >
               Zrušit
             </Button>
-            <Button type='submit' disabled={loading || uploadingImage}>
+            <Button type='submit' disabled={loading || uploadingImage} data-testid="product-submit-btn">
               {loading || uploadingImage ? 'Vytváření...' : 'Vytvořit produkt'}
             </Button>
           </DialogFooter>

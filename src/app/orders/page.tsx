@@ -95,7 +95,7 @@ export default function OrdersPage() {
     <div className='container mx-auto py-8 px-4'>
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-3xl font-bold'>Objednávky</h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={() => setCreateDialogOpen(true)} data-testid="orders-create-btn">
           <Plus className='h-4 w-4 mr-2' />
           Vytvořit objednávku
         </Button>
@@ -106,7 +106,7 @@ export default function OrdersPage() {
       ) : orders.length === 0 ? (
         <div className='text-center py-12 border rounded-lg'>
           <p className='text-muted-foreground mb-4'>Žádné objednávky</p>
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={() => setCreateDialogOpen(true)} data-testid="orders-create-first-btn">
             <Plus className='h-4 w-4 mr-2' />
             Vytvořit první objednávku
           </Button>
@@ -130,6 +130,7 @@ export default function OrdersPage() {
                   key={order.id}
                   className='cursor-pointer hover:bg-muted/50'
                   onClick={() => router.push(`/orders/${order.id}`)}
+                  data-testid="order-row"
                 >
                   <TableCell className='font-medium'>
                     {order.formattedId}
@@ -146,6 +147,7 @@ export default function OrdersPage() {
                       size='sm'
                       onClick={() => handleDelete(order.id)}
                       disabled={deletingId === order.id}
+                      data-testid="orders-delete-btn"
                     >
                       <Trash2 className='h-4 w-4 mr-2' />
                       {deletingId === order.id ? 'Mazání...' : 'Smazat'}

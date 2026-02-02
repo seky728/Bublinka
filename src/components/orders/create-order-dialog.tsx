@@ -89,6 +89,7 @@ export function CreateOrderDialog({
                 id='name'
                 {...register('name')}
                 placeholder='Např. Kuchyň Novák'
+                data-testid="order-name-input"
               />
               {errors.name && (
                 <p className='text-sm text-red-500'>{errors.name.message}</p>
@@ -104,10 +105,11 @@ export function CreateOrderDialog({
                 reset();
                 onOpenChange(false);
               }}
+              data-testid="order-cancel-btn"
             >
               Zrušit
             </Button>
-            <Button type='submit' disabled={loading}>
+            <Button type='submit' disabled={loading} data-testid="order-submit-btn">
               {loading ? 'Vytváření...' : 'Vytvořit'}
             </Button>
           </DialogFooter>

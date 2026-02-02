@@ -120,7 +120,7 @@ export default function ProductsPage() {
     <div className='container mx-auto py-8 px-4'>
       <div className='flex justify-between items-center mb-6'>
         <h1 className='text-3xl font-bold'>Produkty</h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={() => setCreateDialogOpen(true)} data-testid="products-add-btn">
           <Plus className='h-4 w-4 mr-2' />
           Přidat produkt
         </Button>
@@ -131,7 +131,7 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <div className='text-center py-12 border rounded-lg'>
           <p className='text-muted-foreground mb-4'>Žádné produkty</p>
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={() => setCreateDialogOpen(true)} data-testid="products-add-first-btn">
             <Plus className='h-4 w-4 mr-2' />
             Vytvořit první produkt
           </Button>
@@ -208,6 +208,7 @@ export default function ProductsPage() {
                     size='sm'
                     onClick={() => handleEditClick(product.id)}
                     className='flex-1'
+                    data-testid="products-edit-btn"
                   >
                     <Pencil className='h-4 w-4 mr-2' />
                     Upravit
@@ -218,6 +219,7 @@ export default function ProductsPage() {
                     onClick={() => handleDelete(product.id)}
                     disabled={deletingId === product.id}
                     className='flex-1'
+                    data-testid="products-delete-btn"
                   >
                     <Trash2 className='h-4 w-4 mr-2' />
                     {deletingId === product.id ? 'Mazání...' : 'Smazat'}

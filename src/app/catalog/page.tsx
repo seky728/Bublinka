@@ -86,7 +86,7 @@ export default function CatalogPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Katalog položek</h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={() => setCreateDialogOpen(true)} data-testid="catalog-add-btn">
           <Plus className="h-4 w-4 mr-2" />
           Přidat definici
         </Button>
@@ -97,7 +97,7 @@ export default function CatalogPage() {
       ) : definitions.length === 0 ? (
         <div className="text-center py-12 border rounded-lg">
           <p className="text-muted-foreground mb-4">Žádné definice</p>
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={() => setCreateDialogOpen(true)} data-testid="catalog-add-first-btn">
             <Plus className="h-4 w-4 mr-2" />
             Přidat první definici
           </Button>
@@ -115,7 +115,7 @@ export default function CatalogPage() {
             </TableHeader>
             <TableBody>
               {definitions.map((def) => (
-                <TableRow key={def.id}>
+                <TableRow key={def.id} data-testid="catalog-definition-row">
                   <TableCell className="font-medium">{def.name}</TableCell>
                   <TableCell>
                     {CATEGORY_LABELS[def.category] ?? def.category}
@@ -129,6 +129,7 @@ export default function CatalogPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setEditingDefinition(def)}
+                        data-testid="catalog-edit-btn"
                       >
                         <Pencil className="h-4 w-4 mr-2" />
                         Upravit
@@ -138,6 +139,7 @@ export default function CatalogPage() {
                         size="sm"
                         onClick={() => handleDelete(def.id)}
                         disabled={deletingId === def.id}
+                        data-testid="catalog-delete-btn"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         {deletingId === def.id ? 'Mazání...' : 'Smazat'}

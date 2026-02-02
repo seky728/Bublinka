@@ -296,6 +296,7 @@ export function EditProductDialog({
                   id="edit-name"
                   {...register('name')}
                   placeholder="Např. Stůl"
+                  data-testid="product-edit-name-input"
                 />
                 {errors.name && (
                   <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -309,6 +310,7 @@ export function EditProductDialog({
                   {...register('description')}
                   placeholder="Popis produktu..."
                   rows={3}
+                  data-testid="product-edit-description-input"
                 />
                 {errors.description && (
                   <p className="text-sm text-red-500">{errors.description.message}</p>
@@ -323,6 +325,7 @@ export function EditProductDialog({
                   step="0.01"
                   {...register('sellingPrice')}
                   placeholder="0.00"
+                  data-testid="product-edit-selling-price-input"
                 />
                 {errors.sellingPrice && (
                   <p className="text-sm text-red-500">{errors.sellingPrice.message}</p>
@@ -336,6 +339,7 @@ export function EditProductDialog({
                   {...register('productionSteps')}
                   placeholder="Popis výrobních kroků..."
                   rows={4}
+                  data-testid="product-edit-production-steps-input"
                 />
                 {errors.productionSteps && (
                   <p className="text-sm text-red-500">{errors.productionSteps.message}</p>
@@ -351,6 +355,7 @@ export function EditProductDialog({
                       accept="image/*"
                       onChange={handleImageChange}
                       className="cursor-pointer"
+                      data-testid="product-edit-image-input"
                     />
                   </div>
                   {imagePreview && (
@@ -399,10 +404,11 @@ export function EditProductDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={loading || uploadingImage}
+                data-testid="product-edit-cancel-btn"
               >
                 Zrušit
               </Button>
-              <Button type="submit" disabled={loading || uploadingImage}>
+              <Button type="submit" disabled={loading || uploadingImage} data-testid="product-edit-submit-btn">
                 {loading || uploadingImage ? 'Ukládání...' : 'Uložit změny'}
               </Button>
             </DialogFooter>

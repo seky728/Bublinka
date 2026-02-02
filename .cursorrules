@@ -20,3 +20,17 @@
 ## 4. Documentation:
 - **ALWAYS read `docs/BUSINESS_LOGIC.md` when modifying inventory operations.**
 - Refer to `docs/TECH_CONTEXT.md` for technical architecture and current implementation status.
+
+## 5. Testing & QA Standards
+
+* **Always add `data-testid` attributes** to key interactive elements and containers when creating or modifying UI components. This is crucial for our Playwright E2E tests.
+* **Naming Convention:** Use kebab-case following the pattern: `[domain]-[context]-[element-type]`.
+    * *Bad:* `data-testid="button"`, `data-testid="submit"`
+    * *Good:* `auth-login-submit-btn`, `inventory-add-item-modal`, `order-list-row`
+* **Priority Elements to Tag:**
+    1.  **Buttons:** Main actions (Save, Delete, Confirm, Add). Suffix: `-btn`
+    2.  **Inputs:** Text fields, selects, checkboxes. Suffix: `-input`, `-select`, `-checkbox`
+    3.  **Lists/Tables:** The container and individual rows. Suffix: `-list`, `-row` (e.g., `inventory-table`, `inventory-row`)
+    4.  **Status Indicators:** Badges or text showing state. Suffix: `-status`
+    5.  **Modals/Dialogs:** The trigger button and the content wrapper.
+* **Do NOT** remove existing `data-testid` attributes during refactoring unless the element itself is removed.

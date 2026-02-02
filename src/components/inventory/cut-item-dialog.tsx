@@ -205,6 +205,7 @@ export function CutItemDialog({
                   {...register('cutWidth')}
                   placeholder='0'
                   disabled={isConsumeWhole}
+                  data-testid="cut-width-input"
                 />
                 {errors.cutWidth && (
                   <p className='text-sm text-red-500'>
@@ -222,6 +223,7 @@ export function CutItemDialog({
                   {...register('cutHeight')}
                   placeholder='0'
                   disabled={isConsumeWhole}
+                  data-testid="cut-height-input"
                 />
                 {errors.cutHeight && (
                   <p className='text-sm text-red-500'>
@@ -239,11 +241,13 @@ export function CutItemDialog({
                   setValue('direction', value as 'horizontal' | 'vertical')
                 }
                 disabled={isConsumeWhole}
+                data-testid="cut-direction-radio"
               >
                 <div className='flex items-center space-x-2'>
                   <RadioGroupItem
                     value='horizontal'
                     id='horizontal'
+                    data-testid="cut-direction-horizontal"
                   />
                   <Label
                     htmlFor='horizontal'
@@ -256,6 +260,7 @@ export function CutItemDialog({
                   <RadioGroupItem
                     value='vertical'
                     id='vertical'
+                    data-testid="cut-direction-vertical"
                   />
                   <Label
                     htmlFor='vertical'
@@ -272,6 +277,7 @@ export function CutItemDialog({
                 type='button'
                 variant='outline'
                 onClick={handleConsumeWhole}
+                data-testid="cut-consume-whole-btn"
               >
                 Spotřebovat celé
               </Button>
@@ -287,6 +293,7 @@ export function CutItemDialog({
                       setValue('saveMainRemnant', checked === true)
                     }
                     disabled={isConsumeWhole}
+                    data-testid="cut-save-main-remnant-checkbox"
                   />
                   <Label
                     htmlFor='saveMainRemnant'
@@ -319,6 +326,7 @@ export function CutItemDialog({
                       setValue('saveSecondaryRemnant', checked === true)
                     }
                     disabled={isConsumeWhole}
+                    data-testid="cut-save-secondary-remnant-checkbox"
                   />
                   <Label
                     htmlFor='saveSecondaryRemnant'
@@ -351,12 +359,14 @@ export function CutItemDialog({
                 reset();
                 onOpenChange(false);
               }}
+              data-testid="cut-cancel-btn"
             >
               Zrušit
             </Button>
             <Button
               type='submit'
               disabled={loading}
+              data-testid="cut-submit-btn"
             >
               {loading ? 'Řezám...' : 'Provést řezání'}
             </Button>

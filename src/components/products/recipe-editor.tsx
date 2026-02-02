@@ -107,6 +107,7 @@ export function RecipeEditor({
           variant="outline"
           size="sm"
           onClick={addIngredient}
+          data-testid="recipe-add-ingredient-btn"
         >
           <Plus className="h-4 w-4 mr-2" />
           Přidat ingredienci
@@ -142,7 +143,7 @@ export function RecipeEditor({
               const isSheetMaterial = selectedDef?.category === 'SHEET_MATERIAL';
 
               return (
-                <TableRow key={index}>
+                <TableRow key={index} data-testid="recipe-ingredient-row">
                   <TableCell className="align-top">
                     <div className="space-y-1">
                       <Combobox
@@ -158,6 +159,7 @@ export function RecipeEditor({
                         placeholder="Vyberte definici položky"
                         searchPlaceholder="Hledat definici..."
                         emptyText="Žádné definice. Přidejte je v Katalogu."
+                        data-testid={`recipe-ingredient-definition-${index}`}
                       />
                       {itemErrors.itemDefinitionId && (
                         <p className="text-sm text-red-500">
@@ -193,6 +195,7 @@ export function RecipeEditor({
                               parseFloat(e.target.value) || 0,
                             )
                           }
+                          data-testid={`recipe-ingredient-width-${index}`}
                         />
                         {itemErrors.width && (
                           <p className="text-sm text-red-500">{itemErrors.width}</p>
@@ -219,6 +222,7 @@ export function RecipeEditor({
                               parseFloat(e.target.value) || 0,
                             )
                           }
+                          data-testid={`recipe-ingredient-height-${index}`}
                         />
                         {itemErrors.height && (
                           <p className="text-sm text-red-500">{itemErrors.height}</p>
@@ -244,6 +248,7 @@ export function RecipeEditor({
                             parseFloat(e.target.value) || 0,
                           )
                         }
+                        data-testid={`recipe-ingredient-quantity-${index}`}
                       />
                       {itemErrors.quantity && (
                         <p className="text-sm text-red-500">{itemErrors.quantity}</p>
@@ -257,6 +262,7 @@ export function RecipeEditor({
                       size="icon"
                       onClick={() => removeIngredient(index)}
                       className="h-9 w-9"
+                      data-testid={`recipe-remove-ingredient-${index}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
