@@ -34,3 +34,24 @@
     4.  **Status Indicators:** Badges or text showing state. Suffix: `-status`
     5.  **Modals/Dialogs:** The trigger button and the content wrapper.
 * **Do NOT** remove existing `data-testid` attributes during refactoring unless the element itself is removed.
+
+# Tools
+
+## Test Execution & Quality Assurance
+
+* **Authority to Test:** When working in Composer (Agent mode), you are encouraged to run tests to verify your changes, especially after modifying critical logic (Orders, Inventory, Calculations).
+* **Test Commands:**
+    * **Full E2E Suite:** `npm run test:e2e` (Use this to verify end-to-end flows).
+    * **UI Mode (Debugging):** `npm run test:e2e:ui` (Only if specifically asked).
+* **Workflow for Agent:**
+    1.  Implement the requested changes/refactoring.
+    2.  Run `npm run test:e2e` in the terminal.
+    3.  **Read the Output:** Analyze the terminal output carefully. Look for failed assertions or timeouts.
+    4.  **Self-Correction (Limit: 3 Retries):** If a test fails, you may attempt to fix the code or the test and re-run.
+        * **CRITICAL:** You have a strict maximum budget of **3 retry attempts**. Do NOT exceed this.
+    5.  **Stop & Report:**
+        * **If tests pass:** Report "Done" and confirm everything is green.
+        * **If tests STILL fail after 3 attempts:** STOP immediately. Do not loop.
+            * Report: *"Tests failed after 3 attempts."*
+            * Provide: The specific error message/logs from the last run.
+            * Ask: *"How would you like to proceed? Should I revert the changes or do you want to debug this together?"*
