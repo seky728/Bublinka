@@ -88,6 +88,8 @@ export function CreateProductDialog({
       setImagePreview(null);
       setPhotoUrl('');
       setIngredientErrors([]);
+      setLoading(false); // Reset loading state when dialog closes
+      setUploadingImage(false); // Reset uploading state when dialog closes
     }
   }, [open, reset]);
 
@@ -139,6 +141,11 @@ export function CreateProductDialog({
   };
 
   const onSubmit = async (data: CreateProductForm) => {
+    // Prevent double submission
+    if (loading || uploadingImage) {
+      return;
+    }
+
     const errors: RecipeIngredientErrors[] = [];
     let hasErrors = false;
 
@@ -240,9 +247,20 @@ export function CreateProductDialog({
     }
   };
 
+  // Prevent dialog from closing while submitting
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && (loading || uploadingImage)) {
+      return; // Prevent closing while submitting
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-[700px] max-h-[90vh] overflow-y-auto'>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent 
+        className='sm:max-w-[700px] max-h-[90vh] overflow-y-auto'
+        data-testid="product-create-dialog"
+      >
         <DialogHeader>
           <DialogTitle>Vytvořit produkt</DialogTitle>
           <DialogDescription>

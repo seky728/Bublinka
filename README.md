@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bublinka ERP
+
+This is a [Next.js](https://nextjs.org) ERP application built with TypeScript, Prisma, and Supabase.
 
 ## Getting Started
 
@@ -6,19 +8,28 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project uses **Playwright** for end-to-end testing with a custom test framework that includes:
+
+- **Automatic Database Cleanup**: Tests run with a clean database state
+- **Page Object Model**: Encapsulated UI interactions for maintainability
+- **Prisma Integration**: Direct database access for seeding and verification
+
+**Quick Commands:**
+```bash
+# Run tests in headless mode
+npm run test:e2e
+
+# Run tests in UI mode (for debugging)
+npm run test:e2e:ui
+```
+
+For detailed testing documentation, including architecture, best practices, and how to write new tests, see [docs/TESTING.md](./docs/TESTING.md).
 
 ## Learn More
 
