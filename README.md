@@ -2,6 +2,14 @@
 
 This is a [Next.js](https://nextjs.org) ERP application built with TypeScript, Prisma, and Supabase.
 
+## Recent Updates
+
+### Product Management
+- **Products are Templates**: Products now represent recipes/templates with recommended prices, not final sales
+- **Recommended Price**: Product price field is labeled "Doporučená cena" (Recommended Price) to clarify it's a default value
+- **Cost Calculations**: Removed from Product definition view - costs are calculated in Order/Production view when specific stock items are selected
+- **VAT Support**: Added Czech VAT rate selection (STANDARD 21%, REDUCED 12%, ZERO 0%) with temporal validity support
+
 ## Getting Started
 
 First, run the development server:

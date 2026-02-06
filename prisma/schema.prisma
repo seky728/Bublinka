@@ -37,6 +37,7 @@ model ItemDefinition {
   category           ItemDefinitionCategory
   properties         Json?
   description        String?
+  purchasePrice       Decimal?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   inventoryItems     InventoryItem[]
@@ -77,6 +78,7 @@ model Product {
   photoUrl       String?
   sellingPrice   Float
   productionSteps String?
+  vatCode        String              @default("STANDARD")
   ingredients    ProductIngredient[]
   orderItems     OrderItem[]
   createdAt      DateTime            @default(now())
@@ -115,6 +117,18 @@ model Order {
 
   @@index([status])
   @@index([createdAt])
+}
+
+model VatRate {
+  id         Int       @id @default(autoincrement())
+  code       String
+  name       String
+  percentage Decimal
+  validFrom  DateTime
+  validTo    DateTime?
+
+  @@unique([code, validFrom])
+  @@index([code, validFrom])
 }
 
 model OrderItem {

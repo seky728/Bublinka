@@ -23,6 +23,7 @@ import { RecipeEditor, type RecipeIngredient, type RecipeIngredientErrors } from
 import { useToast } from '@/hooks/use-toast';
 import type { ItemDefinition } from '@prisma/client';
 import { ImageIcon } from 'lucide-react';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 
 const editProductFormSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -58,7 +59,15 @@ export function EditProductDialog({
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [definitions, setDefinitions] = useState<ItemDefinition[]>([]);
   const [ingredientErrors, setIngredientErrors] = useState<RecipeIngredientErrors[]>([]);
+  const [vatCode, setVatCode] = useState<string>('STANDARD');
   const { toast } = useToast();
+
+  // VAT rate options
+  const vatRateOptions: ComboboxOption[] = [
+    { value: 'STANDARD', label: 'Základní (21%)' },
+    { value: 'REDUCED', label: 'Snížená (12%)' },
+    { value: 'ZERO', label: 'Nulová (0%)' },
+  ];
 
   const {
     register,
@@ -104,6 +113,7 @@ export function EditProductDialog({
           });
           setPhotoUrl(product.photoUrl ?? '');
           setExistingImageUrl(product.imageUrl ?? null);
+          setVatCode(product.vatCode ?? 'STANDARD');
           setIngredients(
             product.ingredients.map((ing) => ({
               itemDefinitionId: ing.itemDefinition?.id ?? 0,
@@ -240,6 +250,7 @@ export function EditProductDialog({
         sellingPrice: data.sellingPrice,
         productionSteps: data.productionSteps || undefined,
         photoUrl: finalPhotoPath || undefined,
+        vatCode: vatCode,
         ingredients: ingredients.map((i) => ({
           itemDefinitionId: i.itemDefinitionId,
           quantity: i.quantity,
@@ -318,7 +329,7 @@ export function EditProductDialog({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="edit-sellingPrice">Prodejní cena (Kč) *</Label>
+                <Label htmlFor="edit-sellingPrice">Doporučená cena (Kč) *</Label>
                 <Input
                   id="edit-sellingPrice"
                   type="number"
@@ -330,6 +341,17 @@ export function EditProductDialog({
                 {errors.sellingPrice && (
                   <p className="text-sm text-red-500">{errors.sellingPrice.message}</p>
                 )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Sazba DPH</Label>
+                <Combobox
+                  options={vatRateOptions}
+                  value={vatCode}
+                  onValueChange={setVatCode}
+                  placeholder='Vyberte sazbu DPH'
+                  data-testid="product-edit-vat-code-select"
+                />
               </div>
 
               <div className="grid gap-2">

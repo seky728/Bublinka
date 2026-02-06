@@ -15,6 +15,7 @@ export const createProductSchema = z.object({
   productionSteps: z.string().optional(),
   // photoUrl now stores the file path (not a URL) - signed URLs are generated when fetching
   photoUrl: z.string().optional().or(z.literal('')),
+  vatCode: z.string().optional().default('STANDARD'),
   ingredients: z
     .array(ingredientSchema)
     .min(1, 'Produkt musí mít alespoň jednu ingredienci'),

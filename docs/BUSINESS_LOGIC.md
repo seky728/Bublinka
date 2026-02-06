@@ -206,11 +206,17 @@ This feature is useful when:
 
 ## Product Concept
 
-Products represent **finished goods** that are manufactured from inventory items. Each product has:
-- Basic information (name, description, selling price)
+Products represent **templates/recipes** for finished goods that will be manufactured from inventory items. Each product has:
+- Basic information (name, description, recommended price)
 - Production steps (optional instructions)
-- A recipe/Bill of Materials (BOM) specifying which inventory items and quantities are needed
+- A recipe/Bill of Materials (BOM) specifying which Item Definitions and quantities are needed
+- VAT rate selection (STANDARD, REDUCED, or ZERO)
 - An optional product image
+
+**Important**: Products are templates, not final sales. The actual cost cannot be calculated at the product definition stage because:
+- Materials are cut from larger stock items (e.g., a 200×200 board)
+- The specific stock item is selected only during the Order/Production phase
+- Cost calculations belong in the Order view, not the Product definition view
 
 ## Recipe/BOM Logic (Bill of Materials)
 
@@ -254,9 +260,11 @@ The relationship is implemented via the `ProductIngredient` join table:
 ### Use Cases
 
 - **Manufacturing**: Track which materials are needed to produce a finished product
-- **Cost Calculation**: Calculate production costs based on ingredient prices
-- **Inventory Planning**: Understand which inventory items are required for production
+- **Inventory Planning**: Understand which Item Definitions are required for production
 - **Recipe Management**: Store and manage production recipes/BOMs
+- **Pricing Templates**: Provide recommended prices that can be adjusted when adding products to orders
+
+**Note**: Cost calculation is performed in the Order/Production view when specific stock items are selected and cut, not in the Product definition view.
 
 ## Image Security Logic
 
@@ -315,19 +323,22 @@ Display Flow:
 ## Product Creation Flow
 
 1. **User Input:**
-   - Enters product name, description, selling price
+   - Enters product name, description, recommended price
+   - Selects VAT rate (STANDARD, REDUCED, or ZERO)
    - Optionally adds production steps
    - Selects and uploads product image (optional)
    - Adds ingredients via Recipe Editor:
-     - Selects inventory item from combobox
+     - Selects Item Definition from combobox
      - Enters quantity needed
+     - For sheet materials, enters width and height dimensions
      - Can add/remove multiple ingredients
 
 2. **Validation:**
    - Product name is required
-   - Selling price must be positive
+   - Recommended price must be positive
    - At least one ingredient is required
-   - Each ingredient must have a valid inventory item and positive quantity
+   - Each ingredient must have a valid Item Definition and positive quantity
+   - For sheet materials, width and height are required
    - Image file type and size validation (if provided)
 
 3. **Image Upload** (if provided):

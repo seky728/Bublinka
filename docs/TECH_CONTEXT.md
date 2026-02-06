@@ -13,6 +13,11 @@
 - **Zod** - Schema validation
 - **React Hook Form** - Form management
 
+### Recent Features (2024)
+- **Czech VAT System**: Temporal VAT rate management with semantic codes (STANDARD, REDUCED, ZERO)
+- **Product Templates**: Products are now templates/recipes with recommended prices; cost calculations moved to Order view
+- **Purchase Price Tracking**: ItemDefinitions can store purchase prices for future cost calculations
+
 ### Key Dependencies
 - `@prisma/adapter-pg` - PostgreSQL adapter for Prisma
 - `pg` - PostgreSQL client library
@@ -236,8 +241,9 @@ model Product {
   name           String
   description    String?
   photoUrl       String?             // File path in Supabase Storage (not a URL)
-  sellingPrice   Float
+  sellingPrice   Float                // Recommended price (displayed as "Doporučená cena" in UI)
   productionSteps String?
+  vatCode        String               @default("STANDARD") // VAT rate code (STANDARD, REDUCED, ZERO)
   ingredients    ProductIngredient[]
   orderItems     OrderItem[]
   createdAt      DateTime            @default(now())
@@ -249,7 +255,7 @@ model Product {
 ```
 
 **Purpose:**
-The Product model represents finished goods. Recipes reference **ItemDefinitions** (catalog) rather than specific inventory items. The `photoUrl` field stores the file path (not a full URL) in Supabase Storage.
+The Product model represents **templates/recipes** for finished goods. Products are not final sales - they define what materials are needed and provide a recommended price. Recipes reference **ItemDefinitions** (catalog) rather than specific inventory items. The `photoUrl` field stores the file path (not a full URL) in Supabase Storage. Cost calculations are performed in the Order view when specific stock items are selected.
 
 ### ProductIngredient Model (Recipe / BOM)
 
@@ -361,8 +367,11 @@ ProductIngredient is the Bill of Materials (BOM) for a product. New recipes use 
 9. **Products Module** (`/products`)
    - Product list page with grid view; **Edit** and Delete per product
    - Create Product Dialog and **Edit Product Dialog** with form validation; Recipe Editor uses **ItemDefinition** for ingredients (quantity; width/height required for SHEET_MATERIAL), table layout for ingredient list
+   - **Recommended Price** field (displayed as "Doporučená cena" in UI) - this is a template value, not a final sale price
+   - **VAT Rate Selection** - Combobox to select STANDARD (21%), REDUCED (12%), or ZERO (0%) VAT rate
    - Image upload with preview; getProduct returns imageUrl (signed) for edit preview, photoUrl (path) for save
    - Product creation, update (**updateProduct**), and deletion with cascade cleanup
+   - **Note**: Cost/margin calculations are NOT shown in Product dialogs - products are templates. Actual costs are calculated in Order view when specific stock items are selected
 
 10. **Orders Module** (`/orders`)
    - Orders list: table with ID (#0000), Name, Status, Date, Total Items; create order; row click → detail

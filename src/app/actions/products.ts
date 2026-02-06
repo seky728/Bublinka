@@ -27,6 +27,7 @@ export async function getProducts() {
                 id: true,
                 name: true,
                 category: true,
+                purchasePrice: true,
               },
             },
             inventoryItem: {
@@ -98,6 +99,7 @@ export async function createProduct(data: CreateProductInput) {
           sellingPrice: validated.sellingPrice,
           productionSteps: validated.productionSteps || null,
           photoUrl: validated.photoUrl || null,
+          vatCode: validated.vatCode || 'STANDARD',
         },
       });
 
@@ -124,6 +126,7 @@ export async function createProduct(data: CreateProductInput) {
                   id: true,
                   name: true,
                   category: true,
+                  purchasePrice: true,
                 },
               },
               inventoryItem: {
@@ -178,6 +181,7 @@ export async function getProduct(id: string) {
                 id: true,
                 name: true,
                 category: true,
+                purchasePrice: true,
               },
             },
             inventoryItem: {
@@ -256,6 +260,7 @@ export async function updateProduct(data: UpdateProductInput) {
           sellingPrice: validated.sellingPrice,
           productionSteps: validated.productionSteps ?? null,
           photoUrl: validated.photoUrl ?? undefined,
+          vatCode: validated.vatCode || 'STANDARD',
         },
       });
 
@@ -284,6 +289,7 @@ export async function updateProduct(data: UpdateProductInput) {
                   id: true,
                   name: true,
                   category: true,
+                  purchasePrice: true,
                 },
               },
               inventoryItem: {

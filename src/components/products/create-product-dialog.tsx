@@ -23,6 +23,7 @@ import { RecipeEditor, type RecipeIngredient, type RecipeIngredientErrors } from
 import { useToast } from '@/hooks/use-toast';
 import type { ItemDefinition } from '@prisma/client';
 import { ImageIcon } from 'lucide-react';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 
 const createProductFormSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -52,14 +53,21 @@ export function CreateProductDialog({
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [definitions, setDefinitions] = useState<ItemDefinition[]>([]);
   const [ingredientErrors, setIngredientErrors] = useState<RecipeIngredientErrors[]>([]);
+  const [vatCode, setVatCode] = useState<string>('STANDARD');
   const { toast } = useToast();
+
+  // VAT rate options
+  const vatRateOptions: ComboboxOption[] = [
+    { value: 'STANDARD', label: 'Základní (21%)' },
+    { value: 'REDUCED', label: 'Snížená (12%)' },
+    { value: 'ZERO', label: 'Nulová (0%)' },
+  ];
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm<CreateProductForm>({
     resolver: zodResolver(createProductFormSchema) as Resolver<CreateProductForm>,
     defaultValues: {
@@ -88,6 +96,7 @@ export function CreateProductDialog({
       setImagePreview(null);
       setPhotoUrl('');
       setIngredientErrors([]);
+      setVatCode('STANDARD');
       setLoading(false); // Reset loading state when dialog closes
       setUploadingImage(false); // Reset uploading state when dialog closes
     }
@@ -212,6 +221,7 @@ export function CreateProductDialog({
         sellingPrice: data.sellingPrice,
         productionSteps: data.productionSteps || undefined,
         photoUrl: finalPhotoPath || undefined,
+        vatCode: vatCode,
         ingredients: ingredients.map((i) => ({
           itemDefinitionId: i.itemDefinitionId,
           quantity: i.quantity,
@@ -300,7 +310,7 @@ export function CreateProductDialog({
             </div>
 
             <div className='grid gap-2'>
-              <Label htmlFor='sellingPrice'>Prodejní cena (Kč) *</Label>
+              <Label htmlFor='sellingPrice'>Doporučená cena (Kč) *</Label>
               <Input
                 id='sellingPrice'
                 type='number'
@@ -314,6 +324,17 @@ export function CreateProductDialog({
                   {errors.sellingPrice.message}
                 </p>
               )}
+            </div>
+
+            <div className='grid gap-2'>
+              <Label>Sazba DPH</Label>
+              <Combobox
+                options={vatRateOptions}
+                value={vatCode}
+                onValueChange={setVatCode}
+                placeholder='Vyberte sazbu DPH'
+                data-testid="product-vat-code-select"
+              />
             </div>
 
             <div className='grid gap-2'>
